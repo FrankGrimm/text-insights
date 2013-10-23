@@ -1,3 +1,52 @@
+from __future__ import unicode_literals
+
 from django.db import models
 
-# Create your models here.
+class Keyphrase(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    method = models.IntegerField()
+    text = models.TextField()
+    class Meta:
+        db_table = 'keyphrase'
+
+class KeyphraseMethod(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=50L)
+    description = models.TextField()
+    class Meta:
+        db_table = 'keyphrase_method'
+
+class Page(models.Model):
+    id = models.IntegerField(primary_key=True)
+    fb_page_id = models.CharField(max_length=100L)
+    fb_page_name = models.IntegerField()
+    last_updated = models.DateTimeField()
+    owner = models.ForeignKey('User', db_column='owner')
+    class Meta:
+        db_table = 'page'
+
+class Post(models.Model):
+    id = models.IntegerField(primary_key=True)
+    fb_post_id = models.CharField(max_length=255L)
+    type = models.CharField(max_length=25L)
+    text = models.TextField()
+    when = models.DateTimeField()
+    parent = models.ForeignKey(''self'', null=True, db_column='parent', blank=True)
+    page = models.ForeignKey(Page, db_column='page')
+    from_field = models.ForeignKey('User', db_column='from') # Field renamed because it was a Python reserved word.
+    class Meta:
+        db_table = 'post'
+
+class PostKeyphraseAssoc(models.Model):
+    post = models.ForeignKey(Post)
+    keyphrase = models.ForeignKey(Keyphrase)
+    class Meta:
+        db_table = 'post_keyphrase_assoc'
+
+class User(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    fullname = models.CharField(max_length=500L)
+    alias = models.CharField(max_length=50L)
+    class Meta:
+        db_table = 'user'
+
