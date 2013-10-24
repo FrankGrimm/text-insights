@@ -31,7 +31,7 @@ class Post(models.Model):
     type = models.CharField(max_length=25L)
     text = models.TextField()
     when = models.DateTimeField()
-    parent = models.ForeignKey(''self'', null=True, db_column='parent', blank=True)
+    parent = models.ForeignKey('self', null=True, db_column='parent', blank=True)
     page = models.ForeignKey(Page, db_column='page')
     from_field = models.ForeignKey('User', db_column='from') # Field renamed because it was a Python reserved word.
     class Meta:
