@@ -20,6 +20,8 @@ lib64
 __pycache__
 
 *.pyc
+*.py~
+.swp
 
 # Installer logs
 pip-log.txt
