@@ -134,6 +134,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
+    'debug_toolbar',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'ti'
@@ -177,4 +178,16 @@ LOGGING = {
         },
     }
 }
+
+def show_toolbar(request):
+    if request.user and request.user.username == "admin":
+        return True
+    return False
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': show_toolbar,
+    # Rest of config
+}
+
+
 
