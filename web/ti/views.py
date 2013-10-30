@@ -8,7 +8,7 @@ import os
 import ti
 
 def home(request):
-    return HttpResponse("Hello" + ti.__file__)
+    return HttpResponse(ti.__file__)
 
 def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
