@@ -1,7 +1,7 @@
 # Django settings for web project.
 import os
 import warnings
-import exceptions 
+import exceptions
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -23,7 +23,7 @@ DATABASES = {
         'PORT': '',                      # Set to empty string for default.
         'OPTIONS': {
             "init_command": "SET storage_engine=INNODB",
-        }  
+        }
     }
 }
 
@@ -54,7 +54,7 @@ USE_I18N = True
 USE_L10N = True
 
 # If you set this to False, Django will not use timezone-aware datetimes.
-USE_TZ = False 
+USE_TZ = False
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
@@ -109,6 +109,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 )
 
 ROOT_URLCONF = 'web.urls'
