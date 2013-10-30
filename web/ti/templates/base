@@ -46,16 +46,24 @@
           </button>
           <a class="brand" href="#">Text Insights</a>
           <div class="nav-collapse collapse">
-            <p class="navbar-text pull-right">
             {% if user.is_authenticated %}
-                Welcome, {{ user.username }} <a href="/logout" class="navbar-link">Logout</a>
+            <ul class="nav pull-right">
+                    <li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Welcome, <i>{{ user.username }}</i> <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <!--li><a href="/user/preferences"><i class="icon-cog"></i> Preferences</a></li>
+                            <li><a href="/help/support"><i class="icon-envelope"></i> Contact Support</a></li>
+                            <li class="divider"></li-->
+                            <li><a href="/logout"><i class="icon-off"></i> Logout</a></li>
+                        </ul>
+                    </li>
+            </ul>
             {% else %}
-            <a href="/login" class="navbar-link">Login</a>
-            {% endif %}
+            <p class="navbar-text pull-right">
+            <a href="/login" class="navbar-link"><i class="icon-user icon-white"></i>Login</a>
             </p>
+            {% endif %}
             <ul class="nav">
-              <li class="active"><a href="#">Dashboard</a></li>
-              <li><a href="#about">About</a></li>
+              <li class="active"><a href="/overview">Data Overview</a></li>
               <li><a href="#imprint">Imprint</a></li>
             </ul>
           </div><!--/.nav-collapse -->

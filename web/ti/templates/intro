@@ -1,3 +1,13 @@
 {% extends "base" %}
 
 {% block title %}Welcome to Text Insights{% endblock %}
+
+{% block maincontent %}<div class="container-fluid">
+
+<div class="row-fluid">
+<div class="span4">
+
+</div>
+</div>
+
+</div>{% endblock%}

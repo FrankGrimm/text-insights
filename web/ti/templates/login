@@ -14,10 +14,10 @@
                     <form accept-charset="UTF-8" role="form" action="#" method="post">
                     <fieldset>
                         <div class="form-group">
-                            <input class="form-control" placeholder="Username" name="username" type="text">
+                            <div class="input-prepend"><span class="add-on"><i class="icon-user"></i></span><input class="form-control" placeholder="Username" name="username" type="text">
                         </div>
                         <div class="form-group">
-                            <input class="form-control" placeholder="Password" name="password" type="password" value="">
+                            <div class="input-prepend"><span class="add-on"><i class="icon-lock"></i></span><input class="form-control" placeholder="Password" name="password" type="password" value="">
                         </div>
                         <input class="btn btn-lg btn-success btn-block" type="submit" value="Login">
                     </fieldset>
