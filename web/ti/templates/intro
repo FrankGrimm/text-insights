@@ -1,0 +1,3 @@
+{% extends "base" %}
+
+{% block title %}Welcome to Text Insights{% endblock %}

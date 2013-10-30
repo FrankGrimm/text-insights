@@ -190,4 +190,4 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 
-
+LOGIN_URL="/login"
