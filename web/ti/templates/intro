@@ -1,6 +1,11 @@
 {% extends "base" %}
+{% load static from staticfiles %}
 
 {% block title %}Welcome to Text Insights{% endblock %}
+
+{% block scriptadd %}
+<script src="{% static "tagcloud/js/tinysort.js" %}"></script>
+{% endblock %}
 
 {% block maincontent %}<div class="container-fluid">
 
@@ -8,6 +13,32 @@
 <div class="span4">
 
 </div>
+
+<div class="span4"></div>
+
+<div class="span4">
+  <div class="tags">
+    <ul>
+        <li class="tag1"><a href="#">Lorem ipsum</a></li>
+        <li class="tag2"><a href="#">Dolor sit amet</a></li>
+        <li class="tag3"><a href="#">Consectetur adipiscing elit</a></li>
+                <li class="tag2"><a href="#">Proin </a></li>
+                <li class="tag4"><a href="#">Sagittis libero</a></li>
+                <li class="tag1"><a href="#">Aliquet augue</a></li>
+                <li class="tag1"><a href="#">Quisque dui lacus</a></li>
+                <li class="tag5"><a href="#">Consequat</a></li>
+                <li class="tag2"><a href="#">Dictum non</a></li>
+                <li class="tag1"><a href="#">Venenatis et tortor</a></li>
+                <li class="tag3"><a href="#">Suspendisse mauris</a></li>
+                <li class="tag4"><a href="#">In accumsan </a></li>
+                <li class="tag1"><a href="#">Egestas neque</a></li>
+                <li class="tag5"><a href="#">Mauris eget felis</a></li>
+                <li class="tag1"><a href="#">Suspendisse</a></li>
+                <li class="tag2"><a href="#">condimentum eleifend nulla</a></li>
+            </ul>
+        </div>    
+</div>
+
 </div>
 
 </div>{% endblock%}

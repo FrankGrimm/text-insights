@@ -35,6 +35,12 @@ def logout_view(request):
     logout(request)
     return redirect('home')
 
+def base_css(request):
+    return render(request, 'base.css', {}, content_type="text/css")
+
+def base_js(request):
+    return render(request, 'base.js', {}, content_type="text/javascript")
+
 @login_required
 def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
