@@ -8,7 +8,7 @@ import os
 import ti
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Max, Min
+from django.db.models import Max, Min, Count
 from ti.models import *
 import json
 
@@ -20,12 +20,28 @@ def page_info(request, page_id=None):
     if page_id is None:
         raise Exception("Invalid page id")
     ctx = {}
+
+    # add page meta-information
     page = ctx['page'] = Page.objects.get(id=page_id)
 
+    # add general information on posts
     minmax = Post.objects.filter(page__exact=page).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
     ctx['firstpost_dt'], ctx['lastpost_dt'] = minmax['dt_first'], minmax['dt_last']
     ctx['postcount'] = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').count()
     ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment').count()
+
+    # add counts of different post types
+    typecounts = Post.objects.filter(page__exact=page).values('posttype').annotate(Count('posttype'))
+    posttypes = {}
+    for typecount in typecounts:
+        posttypes[typecount['posttype']] = typecount['posttype__count']
+    ctx['posttypes'] = posttypes
+    del posttypes['comment']
+    posttypes_json = {}
+    for ptype in posttypes:
+        posttypes_json["%s (%s)" % (ptype, posttypes[ptype])] = posttypes[ptype]
+    ctx['posttypes_json'] = json.dumps(posttypes_json)
+
     return render(request, 'pageoverview', ctx, content_type="text/html")
 
 def login_view(request):

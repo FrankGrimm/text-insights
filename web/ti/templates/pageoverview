@@ -5,16 +5,41 @@
 
 {% block headeradd %}
 <link href="{% static "jqcloud/jqcloud.css" %}" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="{% static "jqplot/jquery.jqplot.css" %}" />
 {% endblock %}
 
 {% block scriptadd %}
 <script src="{% static "tagcloud/js/tinysort.js" %}"></script>
 <script src="{% static "jqcloud/jqcloud-1.0.4.min.js" %}"></script>
+<!--[if lt IE 9]><script language="javascript" type="text/javascript" src="{% static "jqplot/excanvas.js" %}"></script><![endif]-->
+<script language="javascript" type="text/javascript" src="{% static "jqplot/jquery.jqplot.min.js" %}"></script>
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
+
 <script type="text/javascript">
 $(document).ready(function() {
     $.get("/json", {tags: "all"}, function(data) {
         $("div.wordcloud").jQCloud(data);
     }, "json");
+    var posttypes = {% autoescape off %} {{ posttypes_json }} {% endautoescape %} 
+    var posttype_data = []
+    for (var posttype in posttypes) {
+        posttype_data.push([posttype, posttypes[posttype]]);
+    }
+    console.log(posttype_data);
+
+                var plot1 = jQuery.jqplot('chartposttypes', [posttype_data],
+                    {
+                      seriesDefaults: {
+                        renderer: jQuery.jqplot.PieRenderer,
+                        rendererOptions: {
+                          showDataLabels: true,
+                          sliceMargin: 2,
+                        }
+                      },
+                      legend: { show:true, location: 'e' }
+                    }
+                  );
+
  
 });
 </script>
@@ -44,9 +69,7 @@ $(document).ready(function() {
 
         <div class="span4">
             <h3>Post Types</h3>
-            <div class="span12">
-                
-            </div>
+            <div id="chartposttypes" class="chart span12" style="height: 350px;"></div>
         </div>
         <div class="span4">
         </div>

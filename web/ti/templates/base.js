@@ -18,7 +18,7 @@ $(document).ready(function(){
             $(".tags ul li").tsort({order:"asc"});
         },
         function(){
-            $(".tags ul li")[0].tsort({order:"desc"});
+            $(".tags ul li").tsort({order:"desc"});
         }
         );
     $('.tags').append(sortabc);
