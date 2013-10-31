@@ -3,8 +3,26 @@
 
 {% block title %}Welcome to Text Insights{% endblock %}
 
+{% block headeradd %}
+<link href="{% static "jqcloud/jqcloud.css" %}" rel="stylesheet">
+{% endblock %}
+
 {% block scriptadd %}
 <script src="{% static "tagcloud/js/tinysort.js" %}"></script>
+<script src="{% static "jqcloud/jqcloud-1.0.4.min.js" %}"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+   var word_list = [
+   {text: "Lorem", weight: 15},
+   {text: "Ipsum", weight: 9, link: "http://jquery.com/"},
+   {text: "Dolor", weight: 6},
+   {text: "Sit", weight: 7},
+   {text: "Amet", weight: 5}
+    ];
+   $("div.wordcloud").jQCloud(word_list);
+ 
+});
+</script>
 {% endblock %}
 
 {% block maincontent %}<div class="container-fluid">
@@ -14,7 +32,9 @@
 
 </div>
 
-<div class="span4"></div>
+<div class="span4">
+<div class="wordcloud" class="span12" style="w-idth: 550px; height: 350px; position: relative;"></div>
+</div>
 
 <div class="span4">
   <div class="tags">
