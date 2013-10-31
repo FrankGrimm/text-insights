@@ -1,0 +1,66 @@
+{% extends "base" %}
+{% load static from staticfiles %}
+
+{% block title %}Welcome to Text Insights{% endblock %}
+
+{% block headeradd %}
+<link href="{% static "jqcloud/jqcloud.css" %}" rel="stylesheet">
+{% endblock %}
+
+{% block scriptadd %}
+<script src="{% static "tagcloud/js/tinysort.js" %}"></script>
+<script src="{% static "jqcloud/jqcloud-1.0.4.min.js" %}"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    $.get("/json", {tags: "all"}, function(data) {
+        $("div.wordcloud").jQCloud(data);
+    }, "json");
+ 
+});
+</script>
+{% endblock %}
+
+{% block maincontent %}<div class="container-fluid">
+
+    <div class="row-fluid">
+        <div class="span10 offset1">
+        <h2>Page <a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h2>
+        <p class="titlemeta">Last update: {{ page.last_updated }} | <a href="http://facebook.com/{{ page.owner.id }}">Owner</a></p>
+        </div>
+    </div>
+
+<div class="row-fluid">
+<div class="span4">
+
+</div>
+
+<div class="span4">
+<div class="wordcloud" class="span12" style="w-idth: 550px; height: 350px; position: relative;"></div>
+</div>
+
+<!--div class="span4">
+  <div class="tags">
+    <ul>
+        <li class="tag1"><a href="#">Lorem ipsum</a></li>
+        <li class="tag2"><a href="#">Dolor sit amet</a></li>
+        <li class="tag3"><a href="#">Consectetur adipiscing elit</a></li>
+                <li class="tag2"><a href="#">Proin </a></li>
+                <li class="tag4"><a href="#">Sagittis libero</a></li>
+                <li class="tag1"><a href="#">Aliquet augue</a></li>
+                <li class="tag1"><a href="#">Quisque dui lacus</a></li>
+                <li class="tag5"><a href="#">Consequat</a></li>
+                <li class="tag2"><a href="#">Dictum non</a></li>
+                <li class="tag1"><a href="#">Venenatis et tortor</a></li>
+                <li class="tag3"><a href="#">Suspendisse mauris</a></li>
+                <li class="tag4"><a href="#">In accumsan </a></li>
+                <li class="tag1"><a href="#">Egestas neque</a></li>
+                <li class="tag5"><a href="#">Mauris eget felis</a></li>
+                <li class="tag1"><a href="#">Suspendisse</a></li>
+                <li class="tag2"><a href="#">condimentum eleifend nulla</a></li>
+            </ul>
+        </div>    
+</div-->
+
+</div>
+
+</div>{% endblock%}

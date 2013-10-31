@@ -5,6 +5,11 @@ footer {
     margin-left: 2em;
 }
 
+.titlemeta {
+    font-size: 0.8em;
+    font-style: italic;
+}
+
 /* tagcloud */
 
     .tags ul{

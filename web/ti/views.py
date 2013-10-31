@@ -18,7 +18,9 @@ def home(request):
 def page_info(request, page_id=None):
     if page_id is None:
         raise Exception("Invalid page id")
-    return render(request, 'pageoverview', {}, content_type="text/html")
+    ctx = {}
+    ctx['page'] = Page.objects.get(id=page_id)
+    return render(request, 'pageoverview', ctx, content_type="text/html")
 
 def login_view(request):
     if request.method == 'GET' or request.user.is_authenticated():
