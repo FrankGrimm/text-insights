@@ -9,6 +9,7 @@ import ti
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from ti.models import *
+import json
 
 def home(request):
     return render(request, 'intro', {}, content_type="text/html")
@@ -46,6 +47,17 @@ def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
     #return renderTemplate(request, "hello", ctx)
     return render(request, 'home', ctx, content_type="text/html")
+
+def json_serve(request):
+    response_data = [
+   {'text': "Lorem", 'weight': 15},
+   {'text': "Ipsum", 'weight': 9, 'link': "http://jquery.com/"},
+   {'text': "Dolor", 'weight': 6},
+   {'text': "Sit", 'weight': 7},
+   {'text': "Amet", 'weight': 5}
+    ]
+    return HttpResponse(json.dumps(response_data), content_type="application/json")
+
 
 def overview_view(request):
     ctx = {}

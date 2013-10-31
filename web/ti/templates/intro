@@ -12,14 +12,9 @@
 <script src="{% static "jqcloud/jqcloud-1.0.4.min.js" %}"></script>
 <script type="text/javascript">
 $(document).ready(function() {
-   var word_list = [
-   {text: "Lorem", weight: 15},
-   {text: "Ipsum", weight: 9, link: "http://jquery.com/"},
-   {text: "Dolor", weight: 6},
-   {text: "Sit", weight: 7},
-   {text: "Amet", weight: 5}
-    ];
-   $("div.wordcloud").jQCloud(word_list);
+    $.get("/json", {tags: "all"}, function(data) {
+        $("div.wordcloud").jQCloud(data);
+    }, "json");
  
 });
 </script>

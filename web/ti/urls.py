@@ -8,6 +8,7 @@ urlpatterns = patterns('ti.views',
     url(r'^logout$', 'logout_view', name='logout'),
     url(r'^overview$', 'overview_view', name='overview'),
     url(r'^base.js$', 'base_js', name='base_js'),
+    url(r'^json$', 'json_serve', name='json'),
     url(r'^base.css$', 'base_css', name='base_css'),
     url(r'^template$', 'template', name='template'),
 ) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
