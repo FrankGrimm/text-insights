@@ -5,7 +5,7 @@ from django.db import models
 class Keyphrase(models.Model):
     id = models.AutoField(primary_key=True)
     method = models.ForeignKey('KeyphraseMethod')
-    text = models.TextField()
+    term = models.TextField()
     val = models.DecimalField(max_digits=20, decimal_places=10)
     class Meta:
         db_table = 'keyphrase'
