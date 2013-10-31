@@ -49,7 +49,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="brand" href="#">Text Insights</a>
+          <a class="brand" href="/">Text Insights</a>
           <div class="nav-collapse collapse">
             {% if user.is_authenticated %}
             <ul class="nav pull-right">
@@ -68,7 +68,7 @@
             </p>
             {% endif %}
             <ul class="nav">
-              <li class="active"><a href="/overview">Data Overview</a></li>
+              <!--li class="active"><a href="/overview">Data Overview</a></li-->
               <li><a href="#imprint">Imprint</a></li>
             </ul>
           </div><!--/.nav-collapse -->
