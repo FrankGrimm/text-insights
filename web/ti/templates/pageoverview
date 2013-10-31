@@ -17,8 +17,8 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $.get("/json", {tags: "all"}, function(data) {
-        $("div.wordcloud").jQCloud(data);
+    $.get("/json", {tags: "all", page: {{ page.id }}}, function(data) {
+        $("div#wordcloud_global").jQCloud(data);
     }, "json");
     var posttypes = {% autoescape off %} {{ posttypes_json }} {% endautoescape %} 
     var posttype_data = []
@@ -69,22 +69,21 @@ $(document).ready(function() {
 
         <div class="span4">
             <h3>Post Types</h3>
-            <div id="chartposttypes" class="chart span12" style="height: 350px;"></div>
+            <div id="chartposttypes" class="chart span12" style="height: 300px;"></div>
         </div>
+
         <div class="span4">
-        </div>
-        <div class="span4">
+            <h3>All-Time Keywords</h3>
+            <div id="wordcloud_global" class="span12" style="height: 300px; position: relative;"></div>
         </div>
     </div>
 
-<div class="row-fluid">
-<div class="span4">
+    <hr />
 
-</div>
+    <div class="row-fluid">
+        <div class="span12"><h3>Monthly breakdown</h3></div>
+    </div>
 
-<div class="span4">
-<div class="wordcloud" class="span12" style="w-idth: 550px; height: 350px; position: relative;"></div>
-</div>
 
 <!--div class="span4">
   <div class="tags">
