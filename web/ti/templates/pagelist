@@ -1,0 +1,26 @@
+{% extends "base" %}
+
+{% block title %}Text Insights{% endblock %}
+
+{% block maincontent %}
+    <div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span10 offset1">
+        <h2>All Pages</h2>
+        </div>
+    </div>
+    {% for page in pages %}
+    <div class="row-fluid">
+        <div class="span4 offset1">
+            <h3><a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h3>
+            <p>Last update: {{ page.last_updated }}
+            </p>
+        </div>
+        <div class="span3 offset1">
+            <br />
+           <a href="/page/{{ page.id }}" class="btn btn-large"><i class="icon-pencil"></i> <strong>Details</strong></a> 
+        </div>
+    </div>
+    {% endfor %}
+    </div><!-- /div.container-fluid -->
+{% endblock %}

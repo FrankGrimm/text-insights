@@ -12,7 +12,13 @@ from ti.models import *
 import json
 
 def home(request):
-    return render(request, 'intro', {}, content_type="text/html")
+    ctx = {'pages': Page.objects.all}
+    return render(request, 'pagelist', ctx, content_type="text/html")
+
+def page_info(request, page_id=None):
+    if page_id is None:
+        raise Exception("Invalid page id")
+    return render(request, 'pageoverview', {}, content_type="text/html")
 
 def login_view(request):
     if request.method == 'GET' or request.user.is_authenticated():
@@ -49,6 +55,9 @@ def template(request):
     return render(request, 'home', ctx, content_type="text/html")
 
 def json_serve(request):
+    page_id = request.GET['page']
+
+    which_tags = request.GET['tags']
     response_data = [
    {'text': "Lorem", 'weight': 15},
    {'text': "Ipsum", 'weight': 9, 'link': "http://jquery.com/"},
