@@ -8,6 +8,7 @@ import os
 import ti
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from django.db.models import Max, Min
 from ti.models import *
 import json
 
@@ -19,7 +20,12 @@ def page_info(request, page_id=None):
     if page_id is None:
         raise Exception("Invalid page id")
     ctx = {}
-    ctx['page'] = Page.objects.get(id=page_id)
+    page = ctx['page'] = Page.objects.get(id=page_id)
+
+    minmax = Post.objects.filter(page__exact=page).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
+    ctx['firstpost_dt'], ctx['lastpost_dt'] = minmax['dt_first'], minmax['dt_last']
+    ctx['postcount'] = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').count()
+    ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment').count()
     return render(request, 'pageoverview', ctx, content_type="text/html")
 
 def login_view(request):

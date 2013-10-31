@@ -1,7 +1,7 @@
 {% extends "base" %}
 {% load static from staticfiles %}
 
-{% block title %}Welcome to Text Insights{% endblock %}
+{% block title %}Page &quot;{{ page.fb_page_name }}&quot; | Text Insights{% endblock %}
 
 {% block headeradd %}
 <link href="{% static "jqcloud/jqcloud.css" %}" rel="stylesheet">
@@ -26,6 +26,31 @@ $(document).ready(function() {
         <div class="span10 offset1">
         <h2>Page <a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h2>
         <p class="titlemeta">Last update: {{ page.last_updated }} | <a href="http://facebook.com/{{ page.owner.id }}">Owner</a></p>
+        </div>
+    </div>
+    <hr />
+    <div class="row-fluid">
+        <div class="span4">
+        <h3>General Information</h3>
+            <table class="table table-striped table-condensed">
+                <tbody>
+                <tr><td style="font-weight:bold;">Posts</td><td>{{ postcount }}</td></tr>
+                <tr><td style="font-weight:bold;">Comments</td><td>{{ commentcount }}</td></tr>
+                <tr><td style="font-weight:bold;">First post</td><td>{{ firstpost_dt }}</td></tr>
+                <tr><td style="font-weight:bold;">Latest post</td><td>{{ lastpost_dt }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="span4">
+            <h3>Post Types</h3>
+            <div class="span12">
+                
+            </div>
+        </div>
+        <div class="span4">
+        </div>
+        <div class="span4">
         </div>
     </div>
 
