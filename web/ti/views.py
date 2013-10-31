@@ -3,6 +3,7 @@
 from django.http import HttpResponse
 from django.template import Context, loader
 from django.shortcuts import render, redirect
+import collections
 import datetime
 import os
 import ti
@@ -30,6 +31,52 @@ def page_info(request, page_id=None):
     ctx['postcount'] = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').count()
     ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment').count()
 
+    page_info_posttypecounts(page, ctx)
+    page_info_posts(page, ctx)
+
+    return render(request, 'pageoverview', ctx, content_type="text/html")
+
+def page_info_posts(page, ctx):
+    # all posts for this page
+    posts = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+
+    # add monthly statistics
+    months = {}
+    comments = {}
+
+    prev_month = None
+    for post in posts:
+        post.monthchange = prev_month is None or prev_month != post.createtime.month
+        curmonth = post.createtime.month
+        if curmonth < 10:
+            curmonth = "0%s" % curmonth
+        monthid = "%s/%s" % (curmonth, post.createtime.year)
+        if not monthid in months:
+            months[monthid] = {'id': monthid, 'posts': [], 'comments': 0, 'month': post.createtime.month, 'year': post.createtime.year, 'commenters': [], 'likes': 0}
+        months[monthid]['posts'].append(post)
+
+        comments[post.id] = Post.objects.filter(page__exact=page, posttype__exact='comment', parent=post).prefetch_related('createuser').all()
+
+        months[monthid]['comments'] = months[monthid]['comments'] + len(comments[post.id])
+        months[monthid]['likes'] = months[monthid]['likes'] + post.likes
+
+        prev_month = post.createtime.month
+
+    for monthid in months:
+        for post in months[monthid]['posts']:
+            for comment in comments[post.id]:
+                if not comment.createuser in months[monthid]['commenters']:
+                    months[monthid]['commenters'].append(comment.createuser)
+
+    posts_by_month = []
+    for mid in sorted(months.iterkeys()):
+        posts_by_month.append(months[mid])
+
+    ctx['comments'] = comments
+    ctx['posts_by_month'] = posts_by_month
+    ctx['posts'] = posts
+
+def page_info_posttypecounts(page, ctx):
     # add counts of different post types
     typecounts = Post.objects.filter(page__exact=page).values('posttype').annotate(Count('posttype'))
     posttypes = {}
@@ -42,7 +89,6 @@ def page_info(request, page_id=None):
         posttypes_json["%s (%s)" % (ptype, posttypes[ptype])] = posttypes[ptype]
     ctx['posttypes_json'] = json.dumps(posttypes_json)
 
-    return render(request, 'pageoverview', ctx, content_type="text/html")
 
 def login_view(request):
     if request.method == 'GET' or request.user.is_authenticated():
@@ -102,3 +148,4 @@ def renderTemplate(request, templateId, context):
     c = Context(context)
     html = t.render(c)
     return HttpResponse(html)
+
