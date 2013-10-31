@@ -8,6 +8,7 @@ import os
 import ti
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from ti.models import *
 
 def home(request):
     return render(request, 'intro', {}, content_type="text/html")
@@ -39,6 +40,11 @@ def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
     #return renderTemplate(request, "hello", ctx)
     return render(request, 'home', ctx, content_type="text/html")
+
+def overview_view(request):
+    ctx = {}
+    ctx['pages'] = Page.objects.all()
+    return render(request, 'overview', ctx, content_type="text/html")
 
 def renderTemplate(request, templateId, context):
     t = loader.get_template(templateId)

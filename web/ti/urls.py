@@ -6,5 +6,6 @@ urlpatterns = patterns('ti.views',
     url(r'^$', 'home', name='home'),
     url(r'^login$', 'login_view', name='login'),
     url(r'^logout$', 'logout_view', name='logout'),
+    url(r'^overview$', 'overview_view', name='overview'),
     url(r'^template$', 'template', name='template'),
 ) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
