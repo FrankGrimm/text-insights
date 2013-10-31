@@ -126,7 +126,6 @@ def template(request):
 
 def json_serve(request):
     page_id = request.GET['page']
-
     which_tags = request.GET['tags']
     response_data = [
    {'text': "Lorem", 'weight': 15},
