@@ -4,6 +4,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import *
 from ti.models import *
 
+from django.db.models.query import QuerySet
+from django.db.models import Max, Min, Count
+
 import logging
 from dateutil import parser
 import urllib
@@ -54,10 +57,37 @@ class Command(BaseCommand):
 
         if action == "ngrams":
             self.processPageNGrams(page)
+        elif action == "tfidf":
+            self.processTfIdf(page)
         else:
             self._log.warn("Unknown action: %s" % action)
 
         self._log.info("All done for now.")
+
+    def processTfIdf(self, currentpage):
+        for ngram_level in range(1, self.max_ngram_level+1):
+            self.processTf(currentpage, ngram_level)
+            self.processIdf(currentpage, ngram_level)
+
+    def processTf(self, currentpage, ngram_level):
+        self._log.info("Processing term frequencies for ngram level %s" % ngram_level)
+        raw_freq = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = "ngram-%s" % ngram_level).values('term').distinct().annotate(dcount=Count('term'))
+        self._log.info("NGrams total at level %s: %s" % (ngram_level, len(raw_freq)))
+        # TODO delete previous
+        ngram_freqs = raw_freq
+        kp_method = KeyphraseMethod.objects.get(name="tf-raw-%s" % ngram_level)
+        for cur in ngram_freqs:
+            kp, created = Keyphrase.objects.get_or_create(term=cur['term'], method=kp_method, defaults={'val': str(cur['dcount'])})
+            if created:
+                print kp
+                kp.save()
+
+    def processIdf(self, currentpage, ngram_level):
+        self._log.info("Processing inverse document frequencies for ngram level %s" % ngram_level)
+        source_ngrams = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = "ngram-%s" % ngram_level)
+        kp_method = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+
+        pass
 
     def processPageNGrams(self, currentpage):
         self._log.info("Starting processing on content in page %s" % currentpage.fb_page_name)
