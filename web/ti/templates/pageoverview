@@ -14,8 +14,9 @@
 <!--[if lt IE 9]><script language="javascript" type="text/javascript" src="{% static "jqplot/excanvas.js" %}"></script><![endif]-->
 <script language="javascript" type="text/javascript" src="{% static "jqplot/jquery.jqplot.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
-<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasTextRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.dateAxisRenderer.min.js" %}"></script>
 
 
 <script type="text/javascript">
@@ -72,20 +73,22 @@ $(document).ready(function() {
 
     var monthid = undefined;
     {% for monthinfo in posts_by_month %}
-        monthid = "{{monthinfo.year}}-{{monthinfo.month}}-1";
-        console.log(monthid);
+        monthid = "{{monthinfo.year}}-{{monthinfo.month}}-1 0:00AM";
         ph_posts.push([monthid,{{ monthinfo.posts|length }}]);
         ph_comments.push([monthid, {{ monthinfo.comments }}]);
         ph_uniques.push([monthid, {{ monthinfo.commenters|length }}]);
         ph_likes.push([monthid, {{ monthinfo.likes }}]);
     {% endfor %}
-
+    console.log(ph_posts)
     var pagehistoryplot = jQuery.jqplot("chart_pagehistory", [ph_posts, ph_comments, ph_uniques, ph_likes], {
-        axis: {
-            xaxis: { label: 'Month/Year', pad: 0, labelRenderer: $.jqplot.CanvasAxisLabelRenderer },
+        axes: {
+            xaxis: { label: 'Month/Year', pad: 0, 
+                    labelRenderer: $.jqplot.CanvasAxisLabelRenderer, 
+                    renderer:$.jqplot.DateAxisRenderer,
+                    tickOptions:{formatString:'%b %y'} },
             yaxis: { label: 'Count', labelRenderer: $.jqplot.CanvasAxisLabelRenderer }
         },
-        highlighter: { sizeAdjust: 10, show: true, tooltipLocation: 'n', useAxisFormatters: true },
+        highlighter: { sizeAdjust: 10, show: true, tooltipLocation: 'n', useAxesFormatters: true },
         series:[ 
           {
             // Change our line width and use a diamond shaped marker.

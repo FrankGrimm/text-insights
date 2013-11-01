@@ -69,8 +69,11 @@ def page_info_posts(page, ctx):
                     months[monthid]['commenters'].append(comment.createuser)
 
     posts_by_month = []
+    # sort chronologically for view model
     for mid in sorted(months.iterkeys()):
         posts_by_month.append(months[mid])
+
+    # add scroll helper references
 
     ctx['comments'] = comments
     ctx['posts_by_month'] = posts_by_month
