@@ -7,6 +7,8 @@ from ti.models import *
 from django.db.models.query import QuerySet
 from django.db.models import Max, Min, Count
 
+
+from math import log
 import logging
 from dateutil import parser
 import urllib
@@ -66,7 +68,7 @@ class Command(BaseCommand):
 
     def processTfIdf(self, currentpage):
         for ngram_level in range(1, self.max_ngram_level+1):
-            self.processTf(currentpage, ngram_level)
+           #self.processTf(currentpage, ngram_level)
             self.processIdf(currentpage, ngram_level)
 
     def processTf(self, currentpage, ngram_level):
@@ -84,10 +86,19 @@ class Command(BaseCommand):
 
     def processIdf(self, currentpage, ngram_level):
         self._log.info("Processing inverse document frequencies for ngram level %s" % ngram_level)
-        source_ngrams = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = "ngram-%s" % ngram_level)
         kp_method = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
 
-        pass
+        document_count = Post.objects.filter(page=currentpage).count()
+        source_ngrams = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = "ngram-%s" % ngram_level).annotate(num_docs=Count('postkeyphraseassoc'))
+        print source_ngrams[1:10]
+        print source_ngrams[0].num_docs
+        print document_count
+        for cur_ngram in source_ngrams:
+            curidf = log(document_count / cur_ngram.num_docs)
+            kp, created = Keyphrase.objects.get_or_create(term=cur_ngram.term, method=kp_method, defaults={'val': str(curidf)})
+            if created:
+                print kp
+                kp.save()
 
     def processPageNGrams(self, currentpage):
         self._log.info("Starting processing on content in page %s" % currentpage.fb_page_name)

@@ -17,8 +17,8 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $.get("/json", {tags: "all", page: {{ page.id }}}, function(data) {
-        $("div#wordcloud_global").jQCloud(data);
+    $.get("/json", {tags: "all", page: {{ page.id }}, month: -1, year: -1, level: 1}, function(data) {
+        $("div#wordcloud_global").jQCloud(data.tags);
     }, "json");
     var posttypes = {% autoescape off %} {{ posttypes_json }} {% endautoescape %} 
     var posttype_data = []
@@ -43,9 +43,9 @@ $(document).ready(function() {
        var req_month = $(this).data('month');
        var req_year = $(this).data('year');
 
-        $.get("/json", {tags: "all", page: {{ page.id }}, month: req_month, year: req_year}, function(data) {
+        $.get("/json", {tags: "all", page: {{ page.id }}, month: req_month, year: req_year, level: 1}, function(data) {
             var target = "#wordcloud_monthly_" + req_month + "_" + req_year + "";
-            $(target).jQCloud(data);
+            $(target).jQCloud(data.tags);
         }, "json");
     });
 

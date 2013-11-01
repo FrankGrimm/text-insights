@@ -127,15 +127,39 @@ def template(request):
 def json_serve(request):
     page_id = request.GET['page']
     which_tags = request.GET['tags']
-    response_data = [
-   {'text': "Lorem", 'weight': 15},
-   {'text': "Ipsum", 'weight': 9, 'link': "http://jquery.com/"},
-   {'text': "Dolor", 'weight': 6},
-   {'text': "Sit", 'weight': 7},
-   {'text': "Amet", 'weight': 5}
-    ]
+    ngram_level = request.GET['level']
+    month = request.GET['month']
+    year = request.GET['year']
+
+    page = Page.objects.get(id=page_id)
+    response_data = {
+        'page': page.id,
+        'tags': get_tags(page, ngram_level, month, year)
+    }
     return HttpResponse(json.dumps(response_data), content_type="application/json")
 
+def get_tags(curpage, ngram_level, month, year):
+    res = []
+
+    kp_method_tf = KeyphraseMethod.objects.get(name="tf-raw-%s" % ngram_level)
+    kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+
+    tfposts = Post.objects.filter(page=curpage)
+
+    if month > -1:
+        tfposts = tfposts.filter(createtime__month=month)
+    if year > -1:
+        tfposts = tfposts.filter(createtime__year=year)
+
+    post_kps = PostKeyphraseAssoc.objects.filter(post__in=tfposts.all(), keyphrase__method=kp_method_tf)
+
+    tfs = Keyphrase.objects.filter(method=kp_method_tf)
+
+    for tf in tfs.all():
+        res.append({'text': tf.term, 'weight': int(tf.val), 'acl':len(post_kps) })
+    res.append({'text': 'tmp', 'weight': 15, 'link': 'http://google.com'})
+
+    return res
 
 def overview_view(request):
     ctx = {}
