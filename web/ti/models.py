@@ -37,7 +37,7 @@ class PostKeyphraseAssoc(models.Model):
     length = models.IntegerField()
     class Meta:
         db_table = 'post_keyphrase_assoc'
-        unique_together = ('post', 'keyphrase')
+        unique_together = ('post', 'keyphrase', 'offset', 'length')
 
 class User(models.Model):
     id = models.BigIntegerField(primary_key=True)
