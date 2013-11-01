@@ -121,7 +121,6 @@ def base_js(request):
 @login_required
 def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
-    #return renderTemplate(request, "hello", ctx)
     return render(request, 'home', ctx, content_type="text/html")
 
 def json_serve(request):
@@ -155,7 +154,7 @@ def get_tags(curpage, ngram_level, month, year):
 
     tfs = Keyphrase.objects.filter(method=kp_method_tf)
 
-    for tf in tfs.all():
+    for tf in tfs.all()[1:100]:
         res.append({'text': tf.term, 'weight': int(tf.val), 'acl':len(post_kps) })
     res.append({'text': 'tmp', 'weight': 15, 'link': 'http://google.com'})
 
@@ -166,9 +165,4 @@ def overview_view(request):
     ctx['pages'] = Page.objects.all()
     return render(request, 'overview', ctx, content_type="text/html")
 
-def renderTemplate(request, templateId, context):
-    t = loader.get_template(templateId)
-    c = Context(context)
-    html = t.render(c)
-    return HttpResponse(html)
 
