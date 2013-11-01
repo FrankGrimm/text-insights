@@ -14,6 +14,9 @@
 <!--[if lt IE 9]><script language="javascript" type="text/javascript" src="{% static "jqplot/excanvas.js" %}"></script><![endif]-->
 <script language="javascript" type="text/javascript" src="{% static "jqplot/jquery.jqplot.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js" %}"></script>
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasTextRenderer.min.js" %}"></script>
+
 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -27,7 +30,7 @@ $(document).ready(function() {
     }
 
                 var plot1 = jQuery.jqplot('chartposttypes', [posttype_data],
-                    {
+                    {grid:{borderWidth:0, shadow:false} ,
                       seriesDefaults: {
                         renderer: jQuery.jqplot.PieRenderer,
                         rendererOptions: {
@@ -61,6 +64,58 @@ $(document).ready(function() {
             t.slideToggle(500);
         });        
     });
+
+    var ph_posts = [];
+    var ph_comments = [];
+    var ph_uniques = [];
+    var ph_likes = [];
+
+    var monthid = undefined;
+    {% for monthinfo in posts_by_month %}
+        monthid = "{{monthinfo.year}}-{{monthinfo.month}}-1";
+        console.log(monthid);
+        ph_posts.push([monthid,{{ monthinfo.posts|length }}]);
+        ph_comments.push([monthid, {{ monthinfo.comments }}]);
+        ph_uniques.push([monthid, {{ monthinfo.commenters|length }}]);
+        ph_likes.push([monthid, {{ monthinfo.likes }}]);
+    {% endfor %}
+
+    var pagehistoryplot = jQuery.jqplot("chart_pagehistory", [ph_posts, ph_comments, ph_uniques, ph_likes], {
+        axis: {
+            xaxis: { label: 'Month/Year', pad: 0, labelRenderer: $.jqplot.CanvasAxisLabelRenderer },
+            yaxis: { label: 'Count', labelRenderer: $.jqplot.CanvasAxisLabelRenderer }
+        },
+        highlighter: { sizeAdjust: 10, show: true, tooltipLocation: 'n', useAxisFormatters: true },
+        series:[ 
+          {
+            // Change our line width and use a diamond shaped marker.
+            label: 'Posts',
+            lineWidth:2, 
+            markerOptions: { style:'dimaond' },
+            showMarker: true
+          }, 
+          {
+            // Don't show a line, just show markers.
+            // Make the markers 7 pixels with an 'x' style
+            label: 'Comments',
+            showLine:false, 
+            markerOptions: { size: 7, style:"x" }
+          },
+          { 
+            label: 'Unique Commenters',
+            // Use (open) circlular markers.
+            markerOptions: { style:"circle" }
+          }, 
+          {
+            label: 'Likes',
+            // Use a thicker, 5 pixel line and 10 pixel
+            // filled square markers.
+            lineWidth:3, 
+            markerOptions: { style:"filledSquare", size:5 }
+          }
+        ],
+        legend: { show: true, location: 'e' }
+        });
 });
 </script>
 {% endblock %}
@@ -107,6 +162,10 @@ $(document).ready(function() {
         <div class="row-fluid">
         <div class="span10"><h3>Monthly breakdown</h3></div>
         <div class="span2"><button class="btn btn-small" id="btn_smallcontent">Show/Hide posts</button></div>
+        </div>
+        <div class="span5 offset3">
+            <div id="chart_pagehistory" class="chart span12" style="height: 300px;"></div>
+        </div>
         </div>
         {% for monthinfo in posts_by_month %}
             <div class="row-fluid">
