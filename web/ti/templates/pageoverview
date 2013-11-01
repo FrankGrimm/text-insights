@@ -17,7 +17,7 @@
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasTextRenderer.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.dateAxisRenderer.min.js" %}"></script>
-
+<script type="text/javascript" src="{% static "jqplot/plugins/jqplot.highlighter.min.js" %}"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -85,10 +85,12 @@ $(document).ready(function() {
             xaxis: { label: 'Month/Year', pad: 0, 
                     labelRenderer: $.jqplot.CanvasAxisLabelRenderer, 
                     renderer:$.jqplot.DateAxisRenderer,
-                    tickOptions:{formatString:'%b %y'} },
+                    tickOptions:{formatString:'%b %Y'} },
             yaxis: { label: 'Count', labelRenderer: $.jqplot.CanvasAxisLabelRenderer }
         },
-        highlighter: { sizeAdjust: 10, show: true, tooltipLocation: 'n', useAxesFormatters: true },
+        highlighter: { sizeAdjust: 10, show: true, tooltipLocation: 'n', useAxesFormatters: true, tooltipContentEditor: function(str, seriesIndex, pointIndex, plot){
+                        return plot.series[seriesIndex]['label'] + ': ' + str;
+                    } },
         series:[ 
           {
             // Change our line width and use a diamond shaped marker.
@@ -117,7 +119,7 @@ $(document).ready(function() {
             markerOptions: { style:"filledSquare", size:5 }
           }
         ],
-        legend: { show: true, location: 'e' }
+        legend: { show: true, location: 'e', placement: 'outside', marginLeft: 20 }
         });
 });
 </script>
