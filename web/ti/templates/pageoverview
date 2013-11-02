@@ -193,13 +193,13 @@ $(document).ready(function() {
             <div id="chart_pagehistory" class="chart span12" style="height: 300px;"></div>
         </div>
         </div>
-        {% for monthinfo in posts_by_month %}
+        {% for monthinfo in posts_by_month reversed %}
             <div class="row-fluid">
             <div class="span10 offset1 month_caption"><h4>{{ monthinfo.id }}</h4> </div>
             </div>
            <div class="row-fluid">
                 <ul class="span6 offset1 month_content">
-            {% for post in monthinfo.posts %} 
+            {% for post in monthinfo.posts reversed %} 
                 <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong> <a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 {% if comments|get_item:post.id %}
