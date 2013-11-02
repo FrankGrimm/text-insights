@@ -182,15 +182,19 @@ $(document).ready(function() {
            <div class="row-fluid">
                 <ul class="span6 offset1 month_content">
             {% for post in monthinfo.posts %} 
-                <li class="post_item"><p class="post_meta"><strong>{{ post.createuser.name }}</strong> <a href="#" title="{{ post.createtime }}">{{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | Likes: {{post.likes}}</p>
+                <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong> <a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
+                {% if comments|get_item:post.id %}
                 <ul class="post_comments">
                 {% for comment in comments|get_item:post.id %}
-                    <li class="comment_item"><p class="comment_meta"><strong>{{ comment.createuser.alias }}</strong> <a href="#" title="{{ comment.createtime }}">{{ comment.createtime|naturaltime }}</a> Likes: {{ comment.likes }}</p>
+                    <li class="comment_item"><p class="comment_meta"><i class="icon-user"></i> <strong>{{ comment.createuser.alias }}</strong> <a href="#" title="{{ comment.createtime }}"><i class="icon-calendar"></i> {{ comment.createtime|naturaltime }}</a> (<i class="icon-thumbs-up"></i> {{ comment.likes }} likes)</p>
                     <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
                     </li>
                 {% endfor %}
                 </ul> 
+                {% else %}
+                <p class="comments_nocomments">No comments to this post.</p>
+                {% endif %}
                 </li>
             {% endfor %}
                 </ul>

@@ -17,6 +17,16 @@ ul.month_content {
     line-height: 1.38;
 }
 
+p.comments_nocomments {
+    font-style:italic;
+    color: dark-grey;
+    margin-top: -10px;
+}
+
+li i.icon-thumbs-up {
+    color: blue;
+}
+
 li.post_item {
 }
 
