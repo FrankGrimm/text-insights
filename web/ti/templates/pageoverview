@@ -1,6 +1,7 @@
 {% extends "base" %}
 {% load static from staticfiles %}
 {% load dictget %}
+{% load posttype %}
 {% load humanize %}
 {% block title %}Page &quot;{{ page.fb_page_name }}&quot; | Text Insights{% endblock %}
 
@@ -200,13 +201,13 @@ $(document).ready(function() {
            <div class="row-fluid">
                 <ul class="span6 offset1 month_content">
             {% for post in monthinfo.posts reversed %} 
-                <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong> <a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
+                <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 {% if comments|get_item:post.id %}
                 <button class="btn btn-xs btn-info comment_toggle" data-target="post_comments_list_{{ post.id }}"><span class="icon-white icon-chevron-down"></span> Show/Hide comments ({{ comments|get_item:post.id|length }})</button>
                 <ul class="post_comments" id="post_comments_list_{{ post.id }}">
                 {% for comment in comments|get_item:post.id %}
-                    <li class="comment_item"><p class="comment_meta"><i class="icon-user"></i> <strong>{{ comment.createuser.alias }}</strong> <a href="#" title="{{ comment.createtime }}"><i class="icon-calendar"></i> {{ comment.createtime|naturaltime }}</a> (<i class="icon-thumbs-up"></i> {{ comment.likes }} likes)</p>
+                    <li class="comment_item"><p class="comment_meta"><i class="icon-user"></i> <strong>{{ comment.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ comment.createtime }}"><i class="icon-calendar"></i> {{ comment.createtime|naturaltime }}</a> (<i class="icon-thumbs-up"></i> {{ comment.likes }} likes)</p>
                     <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
                     </li>
                 {% endfor %}
