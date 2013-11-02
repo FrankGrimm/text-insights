@@ -23,6 +23,11 @@ p.comments_nocomments {
     margin-top: -10px;
 }
 
+button.comment_toggle {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
 li i.icon-thumbs-up {
     color: blue;
 }

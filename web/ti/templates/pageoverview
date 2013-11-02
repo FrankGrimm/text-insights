@@ -123,6 +123,24 @@ $(document).ready(function() {
         legend: { show: true, location: 'e', placement: 'outside', marginLeft: 20 }
         });
 
+    // Comment toggle
+    $("button.comment_toggle").click(function() {
+        var tgt = $("#" + $(this).data('target'));
+        var btnobj = $(this);
+        tgt.toggle('slow', function() {
+            var iconObj = btnobj.find("span.icon-white");
+            if (tgt.is(":visible")) {
+                iconObj.removeClass("icon-chevron-down");
+                iconObj.addClass("icon-chevron-up");
+            } else {
+                iconObj.removeClass("icon-chevron-up");
+                iconObj.addClass("icon-chevron-down");
+            }
+        });
+    });
+    $("button.comment_toggle").each(function() {
+        $("#" + $(this).data('target')).hide();
+    });
         
 });
 </script>
@@ -185,7 +203,8 @@ $(document).ready(function() {
                 <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong> <a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 {% if comments|get_item:post.id %}
-                <ul class="post_comments">
+                <button class="btn btn-xs btn-info comment_toggle" data-target="post_comments_list_{{ post.id }}"><span class="icon-white icon-chevron-down"></span> Show/Hide comments ({{ comments|get_item:post.id|length }})</button>
+                <ul class="post_comments" id="post_comments_list_{{ post.id }}">
                 {% for comment in comments|get_item:post.id %}
                     <li class="comment_item"><p class="comment_meta"><i class="icon-user"></i> <strong>{{ comment.createuser.alias }}</strong> <a href="#" title="{{ comment.createtime }}"><i class="icon-calendar"></i> {{ comment.createtime|naturaltime }}</a> (<i class="icon-thumbs-up"></i> {{ comment.likes }} likes)</p>
                     <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
