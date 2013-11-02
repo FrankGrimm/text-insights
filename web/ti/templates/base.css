@@ -5,6 +5,13 @@ footer {
     margin-left: 2em;
 }
 
+div.month_caption {
+    margin-top: 2em;
+    margin-bottom: 1em;
+    border-bottom: 2px solid black;
+    text-align: right;
+}
+
 .titlemeta {
     font-size: 0.8em;
     font-style: italic;
