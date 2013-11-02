@@ -10,6 +10,44 @@ footer {
     font-style: italic;
 }
 
+/* post display */
+ul.month_content {
+    list-style-type:none;
+    font-size: 13px;
+    line-height: 1.38;
+}
+
+li.post_item {
+}
+
+blockquote.post_content {
+}
+
+li.post_item p.post_meta {
+}
+
+ul.post_comments {
+    list-style-type:none;
+}
+
+li.comment_item {
+}
+
+li.comment_item p.comment_meta {
+}
+
+blockquote.comment_content {
+
+}
+/*ul.month_content list-style-type:none;
+    li.post_item
+        blockquote.post_content
+        p.post_meta
+        ul.post_comments list-style-type:none;
+            li.comment_item
+                p.comment_meta
+            blockquote.comment_content*/
+
 /* tagcloud */
 
     .tags ul{

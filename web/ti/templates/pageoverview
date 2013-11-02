@@ -121,6 +121,8 @@ $(document).ready(function() {
         ],
         legend: { show: true, location: 'e', placement: 'outside', marginLeft: 20 }
         });
+
+        
 });
 </script>
 {% endblock %}
@@ -177,14 +179,14 @@ $(document).ready(function() {
             <div class="span4 offset7" style="border-bottom:1px solid black; text-align:right"><h4>{{ monthinfo.id }}</h4> </div>
             </div>
            <div class="row-fluid">
-                <ul class="span6 offset1 month_content" style="list-style-type:none;">
+                <ul class="span6 offset1 month_content">
             {% for post in monthinfo.posts %} 
                 <li class="post_item"><p class="post_meta"><strong>{{ post.createuser.name }}</strong> {{ post.createtime }} (Type: {{post.posttype}} | Likes: {{post.likes}})</p>
-                <blockquote class="post_content">{{ post.text|urlizetrunc:40 }}</blockquote>
-                <ul style="list-style-type:none;" class="post_comments">
+                <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
+                <ul class="post_comments">
                 {% for comment in comments|get_item:post.id %}
                     <li class="comment_item"><p class="comment_meta"><strong>{{ comment.createuser.alias }}</strong> {{ comment.createtime}} (Likes: {{ comment.likes }})</p>
-                    <blockquote class="comment_content">{{ comment.text|urlizetrunc:40 }}</blockquote>
+                    <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
                     </li>
                 {% endfor %}
                 </ul> 
