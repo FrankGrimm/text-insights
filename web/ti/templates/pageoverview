@@ -179,12 +179,12 @@ $(document).ready(function() {
            <div class="row-fluid">
                 <ul class="span6 offset1 month_content" style="list-style-type:none;">
             {% for post in monthinfo.posts %} 
-                <li><strong>{{ post.createuser.name }}</strong> {{ post.createtime }} (Type: {{post.posttype}} | Likes: {{post.likes}})
-                <blockquote>{{ post.text }}</blockquote>
+                <li class="post_item"><p class="post_meta"><strong>{{ post.createuser.name }}</strong> {{ post.createtime }} (Type: {{post.posttype}} | Likes: {{post.likes}})</p>
+                <blockquote class="post_content">{{ post.text|urlizetrunc:40 }}</blockquote>
                 <ul style="list-style-type:none;" class="post_comments">
                 {% for comment in comments|get_item:post.id %}
-                    <li><strong>{{ comment.createuser.alias }}</strong> {{ comment.createtime}} (Likes: {{ comment.likes }})
-                    <blockquote>{{ comment.text }}</blockquote>
+                    <li class="comment_item"><p class="comment_meta"><strong>{{ comment.createuser.alias }}</strong> {{ comment.createtime}} (Likes: {{ comment.likes }})</p>
+                    <blockquote class="comment_content">{{ comment.text|urlizetrunc:40 }}</blockquote>
                     </li>
                 {% endfor %}
                 </ul> 
