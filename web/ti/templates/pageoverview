@@ -1,6 +1,7 @@
 {% extends "base" %}
 {% load static from staticfiles %}
 {% load dictget %}
+{% load humanize %}
 {% block title %}Page &quot;{{ page.fb_page_name }}&quot; | Text Insights{% endblock %}
 
 {% block headeradd %}
@@ -181,11 +182,11 @@ $(document).ready(function() {
            <div class="row-fluid">
                 <ul class="span6 offset1 month_content">
             {% for post in monthinfo.posts %} 
-                <li class="post_item"><p class="post_meta"><strong>{{ post.createuser.name }}</strong> {{ post.createtime }} (Type: {{post.posttype}} | Likes: {{post.likes}})</p>
+                <li class="post_item"><p class="post_meta"><strong>{{ post.createuser.name }}</strong> <a href="#" title="{{ post.createtime }}">{{ post.createtime|naturaltime }}</a> Type: {{post.posttype}} | Likes: {{post.likes}}</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 <ul class="post_comments">
                 {% for comment in comments|get_item:post.id %}
-                    <li class="comment_item"><p class="comment_meta"><strong>{{ comment.createuser.alias }}</strong> {{ comment.createtime}} (Likes: {{ comment.likes }})</p>
+                    <li class="comment_item"><p class="comment_meta"><strong>{{ comment.createuser.alias }}</strong> <a href="#" title="{{ comment.createtime }}">{{ comment.createtime|naturaltime }}</a> Likes: {{ comment.likes }}</p>
                     <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
                     </li>
                 {% endfor %}

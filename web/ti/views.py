@@ -74,6 +74,14 @@ def page_info_posts(page, ctx):
         posts_by_month.append(months[mid])
 
     # add scroll helper references
+    #for idx, key in enumerate(posts_by_month):
+    #    if idx == 0:
+    #        obj['l_next'] = "%s_%s" (posts_by_month[idx+1]['month'], posts_by_month[idx+1]['year'])
+    #    elif idx == len(posts-by_month)-1:
+    #        obj['l_prev'] = "%s_%s" (posts_by_month[idx-1]['month'], posts_by_month[idx-1]['year'])
+    #    else:
+    #       obj['l_prev'] = "%s_%s" (posts_by_month[idx-1]['month'], posts_by_month[idx-1]['year'])
+    #        obj['l_next'] = "%s_%s" (posts_by_month[idx+1]['month'], posts_by_month[idx+1]['year'])
 
     ctx['comments'] = comments
     ctx['posts_by_month'] = posts_by_month
