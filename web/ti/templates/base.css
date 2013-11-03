@@ -30,6 +30,20 @@ div.month_caption {
 }
 
 /* post display */
+
+ul.jumptomonth {
+    
+}
+
+div#jumpToTop {
+    display: hidden;
+    position: fixed;
+    right: 1em;
+    bottom: 1em;
+    width: 10em;
+    height: 1.5em;
+}
+
 ul.month_content {
     list-style-type:none;
     font-size: 13px;

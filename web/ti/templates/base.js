@@ -34,5 +34,15 @@ $(document).ready(function(){
         );
     $('.tags').append(sortstrength);
 
+    // http://stackoverflow.com/questions/5980237/show-back-to-top-link-element-using-jquery-when-you-scroll-down
+    $(window).scroll(function() {
+        if ($(this).scrollTop() > 400) {
+            $('#jumpToTop:hidden').stop(true, true).fadeIn();
+        } else {
+            $('#jumpToTop').stop(true, true).fadeOut();
+        }
+    });
+    $('#jumpToTop').hide();
+
 });
 })(jQuery);

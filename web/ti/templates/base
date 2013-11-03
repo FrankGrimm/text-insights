@@ -78,6 +78,8 @@
 
     {% block maincontent %}This view does not contain content.{% endblock %}
 
+    <div id="jumpToTop"><a href="#top" class="scrollto"><i class="icon-chevron-up"></i> Top</a></div>
+
     <hr>
     <footer>&copy; 2013</footer>
 
