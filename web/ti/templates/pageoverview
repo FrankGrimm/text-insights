@@ -45,6 +45,8 @@ $(document).ready(function() {
                     }
                   );
 
+    // TODO ajax start/end listeners
+
     $(".wordcloud").each(function() {
        var req_month = $(this).data('month');
        var req_year = $(this).data('year');
@@ -143,6 +145,12 @@ $(document).ready(function() {
         $("#" + $(this).data('target')).hide();
     });
 
+    $("button.post_show").click(function() {
+        debugger;
+        $("#" + $(this).data('target')).find('li.ui-helper-hidden').removeClass('ui-helper-hidden');
+        $(this).hide();
+    });
+
     $("a.scrollto").click(function() {
         $('html, body').animate({
             scrollTop: $("a[name=\"" + $(this).attr('href').substr(1) + "\"]").offset().top - 50
@@ -159,7 +167,7 @@ $(document).ready(function() {
     <div class="row-fluid">
         <div class="span10 offset1">
         <h2>Page <a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h2>
-        <p class="titlemeta">Last update: {{ page.last_updated }} | <a href="http://facebook.com/{{ page.owner.id }}">Owner</a></p>
+        <p class="titlemeta"><a href="http://facebook.com/{{ page.owner.id }}">Page Owner</a></p>
         </div>
     </div>
     <hr />
@@ -172,6 +180,7 @@ $(document).ready(function() {
                 <tr><td style="font-weight:bold;">Comments</td><td>{{ commentcount }}</td></tr>
                 <tr><td style="font-weight:bold;">First post</td><td>{{ firstpost_dt }}</td></tr>
                 <tr><td style="font-weight:bold;">Latest post</td><td>{{ lastpost_dt }}</td></tr>
+                <tr><td style="font-weight:bold;">Last data aquisition</td><td>{{ page.last_updated }}</td></tr>
                 </tbody>
             </table>
         </div>
@@ -216,9 +225,9 @@ $(document).ready(function() {
             <div class="span12 month_caption"><a name="month_{{ monthinfo.id }}"><h4>{{ monthinfo.id }}</h4></a></div>
         </div>
            <div class="row-fluid">
-                <ul class="span7 month_content">
+                <ul class="span7 month_content" id="post_item_list_{{monthinfo.month}}_{{monthinfo.year}}">
             {% for post in monthinfo.posts reversed %} 
-                <li class="post_item"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
+                <li class="post_item{% if forloop.counter > 6 %} ui-helper-hidden{% endif %}"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 {% if comments|get_item:post.id %}
                 <button class="btn btn-xs btn-info comment_toggle" data-target="post_comments_list_{{ post.id }}"><span class="icon-white icon-chevron-down"></span> Show/Hide comments ({{ comments|get_item:post.id|length }})</button>
@@ -231,6 +240,11 @@ $(document).ready(function() {
                 </ul> 
                 {% else %}
                 <p class="comments_nocomments">No comments to this post.</p>
+                {% endif %}
+                {% if forloop.counter == 6 and monthinfo.posts|length > 6 %}
+                <p style="width: 100%; display: block;">
+                  <button class="btn btn-xs post_show" data-target="post_item_list_{{monthinfo.month}}_{{monthinfo.year}}"><span class="icon-refresh"></span> Show {{ monthinfo.posts|length|add:"-6" }} more post(s)</button>
+                </p>
                 {% endif %}
                 </li>
             {% endfor %}

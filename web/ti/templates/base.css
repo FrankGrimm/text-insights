@@ -44,6 +44,15 @@ div#jumpToTop {
     height: 1.5em;
 }
 
+button.post_show {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.ui-helper-hidden {
+    display: none;
+}
+
 ul.month_content {
     list-style-type:none;
     font-size: 13px;

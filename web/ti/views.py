@@ -228,7 +228,7 @@ def get_tags(page, posts, ngram_level, jsonout):
 
     idfmap = {}
     for idf in idfs:
-        idfmap[idf.term] = float(idf.val)
+        idfmap[idf.term] = float(idf.val) ** 2
 
     for tf in tfs:
         curterm = unicode(tf['term'])
