@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+
 # views
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.template import Context, loader
 from django.shortcuts import render, redirect
@@ -8,8 +11,11 @@ import datetime
 import os
 import ti
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
+
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Max, Min, Count
+from itertools import chain
+from django.db.models import Max, Min, Count, F
 from ti.models import *
 import json
 
@@ -134,42 +140,128 @@ def template(request):
     ctx = {'name': 'yourname','now':datetime.datetime.now()}
     return render(request, 'home', ctx, content_type="text/html")
 
+stop_words = None
+
+def read_stop_words():
+    res = {}
+    for word in open(os.path.join(settings.STATIC_ROOT, 'stop_words'), 'rt').read().split('\r\n'):
+        if not word is None and word != '' and not word in res:
+            res[word] = True
+    return res
+
+@never_cache
 def json_serve(request):
+
+    # mandatory parameters: page, tags (type), level
     page_id = request.GET['page']
     which_tags = request.GET['tags']
     ngram_level = request.GET['level']
-    month = request.GET['month']
-    year = request.GET['year']
 
-    page = Page.objects.get(id=page_id)
+    currentpage = Page.objects.get(id=page_id)
+
     response_data = {
-        'page': page.id,
-        'tags': get_tags(page, ngram_level, month, year)
+        'page': currentpage.id,
     }
-    return HttpResponse(json.dumps(response_data), content_type="application/json")
 
-def get_tags(curpage, ngram_level, month, year):
+    targetposts = None
+    # switch which data range to query
+    if 'post_id' in request.GET: # single post
+        parentpost = Post.objects.get(page=currentpage, id=request.GET['post_id'])
+        targetposts = []
+        targetposts.append(parentpost)
+        for comment in Post.objects.filter(page=currentpage, parent=parentpost):
+            targetposts.append(comment)
+        response_data['target'] = 'single_post'
+    else:
+        month = request.GET['month']
+        year = request.GET['year']
+        response_data['target'] = "M=%s;Y=%s" % (month, year)
+        post_filters = {'page': currentpage}
+
+        if year != '-1':
+            post_filters['createtime__year'] = year
+        if month != '-1':
+            post_filters['createtime__month'] = month
+        targetposts = Post.objects.filter(**post_filters)
+
+    # load all comments to these posts
+    targetposts = list(chain(targetposts, Post.objects.filter(parent__in=targetposts)))
+    # TODO eval which_tags
+
+    get_tags(currentpage, targetposts, ngram_level, response_data)
+    resp = HttpResponse(json.dumps(response_data), content_type="application/json")
+    return resp
+
+def get_tags(page, posts, ngram_level, jsonout):
+    global stop_words
+    if stop_words is None:
+        stop_words = read_stop_words()
+
     res = []
 
-    kp_method_tf = KeyphraseMethod.objects.get(name="tf-raw-%s" % ngram_level)
+    # gather terms
+    kp_term_method = KeyphraseMethod.objects.get(name='ngram-%s' % ngram_level)
+
+    # gather TF values (raw)
+    tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).values('term').distinct().annotate(dcount=Count('term'))
+
+    jsonout['termcount'] = tfs.count()
+
+    termlist = []
+    for tf in tfs:
+        has_stop_word = False
+        for cur_part in tf['term'].split(' '):
+            if cur_part in stop_words:
+                has_stop_word = True
+                break
+
+        if not has_stop_word:
+            termlist.append(tf['term'])
+
     kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+    idfs = Keyphrase.objects.filter(term__in=termlist, method = kp_method_idf).distinct()
+    jsonout['idfcount'] = idfs.count()
 
-    tfposts = Post.objects.filter(page=curpage)
+    # retrieve IDF values
 
-    if month > -1:
-        tfposts = tfposts.filter(createtime__month=month)
-    if year > -1:
-        tfposts = tfposts.filter(createtime__year=year)
+    #jsonout['tfqry'] = str(post_tfs.query)
 
-    post_kps = PostKeyphraseAssoc.objects.filter(post__in=tfposts.all(), keyphrase__method=kp_method_tf)
+    idfmap = {}
+    for idf in idfs:
+        idfmap[idf.term] = float(idf.val)
 
-    tfs = Keyphrase.objects.filter(method=kp_method_tf)
+    for tf in tfs:
+        curterm = unicode(tf['term'])
+        tf['tf'] = float(tf['dcount'])
+        if curterm in idfmap:
+            tf['idf'] = idfmap[curterm]
+        else:
+            tf['idf'] = 'NA'
 
-    for tf in tfs.all()[1:100]:
-        res.append({'text': tf.term, 'weight': int(tf.val), 'acl':len(post_kps) })
-    res.append({'text': 'tmp', 'weight': 15, 'link': 'http://google.com'})
+    for tf in tfs:
+        weight = 0.0
+        if tf['idf'] != 'NA':
+            if tf['idf'] == 0.0:
+                weight = 'NA'
+            else:
+                weight = tf['tf'] * tf['idf']
 
-    return res
+        if weight == 'NA':
+            continue
+        nres = {'text': tf['term'], 'weight': weight, 'tf': tf['dcount'], 'idf': tf['idf'] }
+        res.append(nres)
+
+    N = 50
+    jsonout['tagstotal'] = len(res)
+    res = list(reversed(sorted(res, key=lambda cur: cur['weight'])))[:N]
+
+    #for cur in range(len(res)):
+    #    res[cur]['weight'] = cur
+
+    jsonout['postcount'] = len(posts)
+    jsonout['tagsshown'] = len(res)
+    jsonout['tags'] = res
+    return
 
 def overview_view(request):
     ctx = {}

@@ -135,7 +135,7 @@ class Command(BaseCommand):
 
     def isValidNGram(self, curngram):
         for term in curngram:
-            if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", ":", ";", ")", "(", "[", "]", "{", "}"] or self.is_number(term):
+            if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", "|", ":", ";", ")", "(", "[", "]", "{", "}"] or self.is_number(term):
                 return False
         return True
 

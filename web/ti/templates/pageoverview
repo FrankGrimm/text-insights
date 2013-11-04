@@ -177,7 +177,7 @@ $(document).ready(function() {
         </div>
 
         <div class="span4">
-            <h3>All-Time Keywords</h3>
+            <h3><i class="icon-tag"></i> Top Keywords</h3>
             <div id="wordcloud_global" class="span12" style="height: 300px; position: relative;"></div>
         </div>
 
@@ -246,7 +246,7 @@ $(document).ready(function() {
                     </tbody>
                 </table>
 
-                <h5>Monthly tags</h5>
+                <h5><i class="icon-tags"></i> Monthly keywords</h5>
                 <div id="wordcloud_monthly_{{monthinfo.month}}_{{monthinfo.year}}" class="wordcloud span12" style="height: 300px; position: relative;" data-month="{{monthinfo.month}}" data-year="{{monthinfo.year}}"></div>
 
                </div>
