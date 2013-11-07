@@ -36,6 +36,7 @@ class Command(BaseCommand):
         super(Command, self).__init__(*args, **kwargs)
         self._log = logging.getLogger('cmd')
         self.max_ngram_level = 2
+        self.stop_words = None
 
     def handle(self, *args, **options):
         if args is None or len(args) < 2:
@@ -43,6 +44,7 @@ class Command(BaseCommand):
             for page in pages:
                 self._log.info("Page #%s: %s" % (page.id, page.fb_page_name))
             raise CommandError('Invalid arguments. Expected: <page_id> <action>, where action might be: ngrams, ')
+
 
         page_id = args[0]
         action = args[1]
@@ -65,6 +67,20 @@ class Command(BaseCommand):
             self._log.warn("Unknown action: %s" % action)
 
         self._log.info("All done for now.")
+
+    def is_stop_word(self, term):
+        # read stop word file (only executed once)
+        self.read_stop_words()
+        return term in self.stop_words
+
+    def read_stop_words(self):
+        if not self.stop_words is None:
+            return
+        res = {}
+        for word in open(os.path.join(settings.STATIC_ROOT, 'stop_words'), 'rt').read().split('\r\n'):
+            if not word is None and word != '' and not word in res:
+                res[word] = True
+        self.stop_words = res
 
     def processTfIdf(self, currentpage):
         for ngram_level in range(1, self.max_ngram_level+1):
@@ -135,7 +151,11 @@ class Command(BaseCommand):
 
     def isValidNGram(self, curngram):
         for term in curngram:
-            if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", "|", ":", ";", ")", "(", "[", "]", "{", "}"] or self.is_number(term):
+            if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", "|", ":", ";", ")", "(", "[", "]", "{", "}"]:
+                return False
+            if self.is_number(term):
+                return False
+            if self.is_stop_word(term):
                 return False
         return True
 
