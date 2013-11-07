@@ -21,6 +21,8 @@ import random
 import string
 import datetime
 import nltk
+import os
+from django.conf import settings
 
 # hide facebook deprecation warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -37,13 +39,15 @@ class Command(BaseCommand):
         self._log = logging.getLogger('cmd')
         self.max_ngram_level = 2
         self.stop_words = None
+        self.token_stemmer = None
+        self.token_lemmatizer = None
 
     def handle(self, *args, **options):
         if args is None or len(args) < 2:
             pages = Page.objects.all()
             for page in pages:
                 self._log.info("Page #%s: %s" % (page.id, page.fb_page_name))
-            raise CommandError('Invalid arguments. Expected: <page_id> <action>, where action might be: ngrams, ')
+            raise CommandError('Invalid arguments. Expected: <page_id> <action>, where action might be: extract, tfidf')
 
 
         page_id = args[0]
@@ -59,7 +63,7 @@ class Command(BaseCommand):
         self._log.info('Page-Id: %s' % page_id)
         page = Page.objects.get(id=page_id)
 
-        if action == "ngrams":
+        if action == "extract":
             self.processPageNGrams(page)
         elif action == "tfidf":
             self.processTfIdf(page)
@@ -157,6 +161,8 @@ class Command(BaseCommand):
                 return False
             if self.is_stop_word(term):
                 return False
+            if term.find('.') > -1: # or term.find('/') > -1 or term.find("?"): # url parts
+                return False
         return True
 
     def storeNGrams(self, opost, ngram_level, ngram_coll):
@@ -167,8 +173,11 @@ class Command(BaseCommand):
             curoffset = curoffset + 1
             if not self.isValidNGram(curngram):
                 continue
+            curngram = [self.stripSpecialChars(w) for w in curngram]
             curterm = " ".join(curngram)
-            kp, created = Keyphrase.objects.get_or_create(term=curterm, method=kp_method, defaults={'val': "1.0"})
+            curterm_normalized = " ".join(self.normalizeNGram(curngram))
+
+            kp, created = Keyphrase.objects.get_or_create(term=curterm, method=kp_method, defaults={'val': "1.0", 'normalized': curterm_normalized})
             if created:
                 print kp
                 kp.save()
@@ -177,8 +186,21 @@ class Command(BaseCommand):
                 print kp_assoc
                 kp.save()
 
+    def normalizeNGram(self, tokens):
+        if self.token_stemmer is None:
+            self.token_stemmer = nltk.PorterStemmer()
+            #self.token_stemmer = nltk.LancasterStemmer()
+        #if self.token_lemmatizer is None:
+            #self.token_lemmatizer = nltk.WordNetLemmatizer()
+
+        return [self.token_stemmer.stem(w) for w in tokens]
+        #return [self.token_lemmatizer.lemmatize(w) for w in tokens]
+
     def normalizeTokens(self, tokens):
         return [w.lower() for w in tokens]
+
+    def stripSpecialChars(self, word):
+        return word.strip("\r\n.,-+%?!$&/\\'`|:;)([]{}\t ")
 
 class PageCrawler(object):
     def __init__(self, graph):
