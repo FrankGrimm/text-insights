@@ -19,10 +19,12 @@ from django.db.models import Max, Min, Count, F
 from ti.models import *
 import json
 
+@login_required
 def home(request):
     ctx = {'pages': Page.objects.all}
     return render(request, 'pagelist', ctx, content_type="text/html")
 
+@login_required
 def page_info(request, page_id=None):
     if page_id is None:
         raise Exception("Invalid page id")
@@ -149,6 +151,7 @@ def read_stop_words():
             res[word] = True
     return res
 
+@login_required
 @never_cache
 def json_serve(request):
 
