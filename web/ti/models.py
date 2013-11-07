@@ -6,6 +6,7 @@ class Keyphrase(models.Model):
     id = models.AutoField(primary_key=True)
     method = models.ForeignKey('KeyphraseMethod')
     term = models.TextField()
+    normalized = models.TextField(blank=True)
     val = models.DecimalField(max_digits=20, decimal_places=10)
     class Meta:
         db_table = 'keyphrase'
