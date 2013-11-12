@@ -19,6 +19,8 @@ from django.db.models import Max, Min, Count, F
 from ti.models import *
 import json
 
+import operator
+
 @login_required
 def home(request):
     ctx = {'pages': Page.objects.all}
@@ -158,7 +160,6 @@ def json_serve(request):
     # mandatory parameters: page, tags (type), level
     page_id = request.GET['page']
     which_tags = request.GET['tags']
-    ngram_level = request.GET['level']
 
     currentpage = Page.objects.get(id=page_id)
 
@@ -191,50 +192,103 @@ def json_serve(request):
     targetposts = list(chain(targetposts, Post.objects.filter(parent__in=targetposts)))
     # TODO eval which_tags
 
-    get_tags(currentpage, targetposts, ngram_level, response_data)
+    get_tags(currentpage, targetposts, response_data)
     resp = HttpResponse(json.dumps(response_data), content_type="application/json")
     return resp
 
-def get_tags(page, posts, ngram_level, jsonout):
+# targetcolumn = {'normalized', 'term'}
+def get_tags(page, posts, jsonout, target_column = 'normalized'):
     global stop_words
     if stop_words is None:
         stop_words = read_stop_words()
 
-    res = []
 
     # gather terms
-    kp_term_method = KeyphraseMethod.objects.get(name='ngram-%s' % ngram_level)
+    term_results = {}
+    for ngram_level in range(1, 3):
+        kp_term_method = KeyphraseMethod.objects.get(name='ngram-%s' % ngram_level)
+        kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+        term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
+
+    kp_term_method = KeyphraseMethod.objects.get(name='pos_sequence')
+    kp_method_idf = KeyphraseMethod.objects.get(name='idf-pos')
+    term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
+
+    totaltags = 0
+    for method_name in term_results:
+        res = term_results[method_name]
+        jsonout['tags_%s' % method_name] = len(res)
+        N = 50
+        # only use the top 50 tags (max) per method
+        term_results[method_name] = [x for x in list(reversed(sorted(res, key=lambda cur: cur['weight'])))[:N] if x['idf'] != 'NA']
+        # get min/max
+        minval = min(term_results[method_name], key=(lambda item: item['weight']))['weight']
+        maxval = max(term_results[method_name], key=(lambda item: item['weight']))['weight']
+        # normalize weights to [0:100]
+        for item in term_results[method_name]:
+            prev_w = item['weight']
+            item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
+            # weight down unigrams
+            if method_name == 'ngram-1':
+                item['weight'] = item['weight'] * 0.9
+
+    jsonout['postcount'] = len(posts)
+    jsonout['tagsshown'] = len(res)
+
+    jsonout['tags'] = []
+    added_terms = []
+    for method_name in term_results:
+        for termdata in term_results[method_name]:
+            # prevent duplicates from multiple methods and 1-char terms
+            if len(termdata['text']) > 1 and not termdata['text'] in added_terms:
+                added_terms.append(termdata['text'])
+                jsonout['tags'].append(termdata)
+
+    return
+
+
+def get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column):
 
     # gather TF values (raw)
-    tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).values('term').distinct().annotate(dcount=Count('term'))
+    tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).values(target_column).distinct().annotate(dcount=Count(target_column))
 
-    jsonout['termcount'] = tfs.count()
+    res = []
 
     termlist = []
     for tf in tfs:
         has_stop_word = False
-        for cur_part in tf['term'].split(' '):
+        for cur_part in tf[target_column].split(' '):
             if cur_part in stop_words:
                 has_stop_word = True
                 break
 
         if not has_stop_word:
-            termlist.append(tf['term'])
-
-    kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
-    idfs = Keyphrase.objects.filter(term__in=termlist, method = kp_method_idf).distinct()
-    jsonout['idfcount'] = idfs.count()
+            termlist.append(tf[target_column])
 
     # retrieve IDF values
-
-    #jsonout['tfqry'] = str(post_tfs.query)
+    if target_column == 'normalized':
+        idfs = Keyphrase.objects.filter(normalized__in=termlist, method = kp_method_idf).distinct()
+    else:
+        idfs = Keyphrase.objects.filter(term__in=termlist, method = kp_method_idf).distinct()
 
     idfmap = {}
     for idf in idfs:
         idfmap[idf.term] = float(idf.val) ** 2
 
+    if target_column == 'normalized':
+        # lookup data for most common form of some terms, per page
+        real_terms = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, method = kp_term_method, normalized__in=termlist).values('term', 'normalized').distinct().annotate(dcount=Count('term'))
+        normalized_terms = {}
+        for cur_term in real_terms:
+            if not cur_term['normalized'] in normalized_terms:
+                normalized_terms[ cur_term['normalized'] ] = {}
+            if not cur_term['term'] in normalized_terms[ cur_term['normalized'] ]:
+                normalized_terms[ cur_term['normalized'] ][ cur_term['term'] ] = cur_term['dcount']
+            else:
+                normalized_terms[ cur_term['normalized'] ][ cur_term['term'] ] = normalized_terms[ cur_term['normalized'] ][ cur_term['term'] ] + cur_term['dcount']
+
     for tf in tfs:
-        curterm = unicode(tf['term'])
+        curterm = unicode(tf[target_column])
         tf['tf'] = float(tf['dcount'])
         if curterm in idfmap:
             tf['idf'] = idfmap[curterm]
@@ -251,20 +305,25 @@ def get_tags(page, posts, ngram_level, jsonout):
 
         if weight == 'NA':
             continue
-        nres = {'text': tf['term'], 'weight': weight, 'tf': tf['dcount'], 'idf': tf['idf'] }
+
+        nres = {'text': tf[target_column], 'weight': weight, 'tf': tf['dcount'], 'idf': tf['idf'], 'method': kp_term_method.name }
+        if target_column == 'normalized':
+            nres['text_normalized'] = nres['text']
+            if nres['text_normalized'] in normalized_terms:
+                max_count = 0
+                max_item = ""
+                for cur_term in normalized_terms[ nres['text_normalized'] ]:
+                    cur_count = normalized_terms[ nres['text_normalized'] ][cur_term]
+                    if cur_count > max_count:
+                        max_count = cur_count
+                        max_item = cur_term
+                if max_item != "":
+                    nres['found_unnormalized'] = max_count
+                    nres['text'] = max_item
+
         res.append(nres)
 
-    N = 50
-    jsonout['tagstotal'] = len(res)
-    res = list(reversed(sorted(res, key=lambda cur: cur['weight'])))[:N]
-
-    #for cur in range(len(res)):
-    #    res[cur]['weight'] = cur
-
-    jsonout['postcount'] = len(posts)
-    jsonout['tagsshown'] = len(res)
-    jsonout['tags'] = res
-    return
+    return res
 
 def overview_view(request):
     ctx = {}

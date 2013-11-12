@@ -32,18 +32,45 @@ $(document).ready(function() {
         posttype_data.push([posttype, posttypes[posttype]]);
     }
 
-                var plot1 = jQuery.jqplot('chartposttypes', [posttype_data],
-                    {grid:{borderWidth:0, shadow:false} ,
-                      seriesDefaults: {
-                        renderer: jQuery.jqplot.PieRenderer,
-                        rendererOptions: {
-                          showDataLabels: true,
-                          sliceMargin: 2,
-                        }
-                      },
-                      legend: { show:true, location: 'e' }
+    var plotPostTypes = jQuery.jqplot('chartposttypes', [posttype_data],
+       {grid:{borderWidth:0, shadow:false} ,
+        seriesDefaults: {
+           renderer: jQuery.jqplot.PieRenderer,
+           rendererOptions: {
+           showDataLabels: true,
+           sliceMargin: 2,
+        }
+       },
+       legend: { show:true, location: 'e' }
+       }
+     );
+    $("#chartposttypes").bind('jqplotDataClick',
+        function (ev, seriesIndex, pointIndex, data) { 
+            if (data && data[0]) {
+                var filterType = data[0].split(" ")[0];
+                $("ul.month_content li.post_item").each(function() {
+                    if (!$(this).hasClass('ui-helper-hidden')) {
+                        $(this).addClass('ui-helper-hidden');
                     }
-                  );
+                });
+                $("ul.month_content li.post_type_" + filterType).each(function() {
+                    $(this).removeClass('ui-helper-hidden');
+                });
+                $("ul.month_content li button.comment_toggle").hide();
+                $("ul.month_content").each(function() {
+                    console.log($(this));
+                    console.log(  $(this).find('li.ui-helper-hidden').length );
+                    console.log(  $(this).find('li').length  );
+                    if ( $(this).children('li.ui-helper-hidden').length < $(this).children('li').length ) {
+                        $(this).parent().show();
+                    } else {
+                        $(this).parent().hide();
+                    }
+                });
+            }
+        }); 
+
+
 
     // TODO ajax start/end listeners
 
@@ -227,7 +254,7 @@ $(document).ready(function() {
            <div class="row-fluid">
                 <ul class="span7 month_content" id="post_item_list_{{monthinfo.month}}_{{monthinfo.year}}">
             {% for post in monthinfo.posts reversed %} 
-                <li class="post_item{% if forloop.counter > 6 %} ui-helper-hidden{% endif %}"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
+                <li class="post_item{% if forloop.counter > 6 %} ui-helper-hidden{% endif %} post_type_{{post.posttype}}"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
                 <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
                 {% if comments|get_item:post.id %}
                 <button class="btn btn-xs btn-info comment_toggle" data-target="post_comments_list_{{ post.id }}"><span class="icon-white icon-chevron-down"></span> Show/Hide comments ({{ comments|get_item:post.id|length }})</button>
