@@ -192,3 +192,8 @@ DEBUG_TOOLBAR_CONFIG = {
 
 
 LOGIN_URL="/login"
+
+POS_TAGGER={
+    'command': '~/ark-tweet-nlp-0.3.2/runTagger.sh --quiet --input-format text --output-format conll',
+    'max_queue': 40
+}

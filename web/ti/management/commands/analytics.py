@@ -23,8 +23,9 @@ import datetime
 import nltk
 import os
 from django.conf import settings
+from postagger import POSTagger
 
-# hide facebook deprecation warnings
+# hide deprecation warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 # global logging setup
@@ -64,7 +65,7 @@ class Command(BaseCommand):
         page = Page.objects.get(id=page_id)
 
         if action == "extract":
-            self.processPageNGrams(page)
+            self.processPageExtract(page)
         elif action == "tfidf":
             self.processTfIdf(page)
         else:
@@ -90,6 +91,7 @@ class Command(BaseCommand):
         for ngram_level in range(1, self.max_ngram_level+1):
            #self.processTf(currentpage, ngram_level)
             self.processIdf(currentpage, ngram_level)
+        self.processIdfGeneric(currentpage, "pos_sequence", "idf-pos")
 
     def processTf(self, currentpage, ngram_level):
         self._log.info("Processing term frequencies for ngram level %s" % ngram_level)
@@ -106,22 +108,27 @@ class Command(BaseCommand):
 
     def processIdf(self, currentpage, ngram_level):
         self._log.info("Processing inverse document frequencies for ngram level %s" % ngram_level)
-        kp_method = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+        self.processIdfGeneric(currentpage, "ngram-%s" % ngram_level, "idf-%s" % ngram_level)
+
+    def processIdfGeneric(self, currentpage, kp_source, kp_target):
+        kp_method = KeyphraseMethod.objects.get(name=kp_target)
 
         document_count = Post.objects.filter(page=currentpage).count()
-        source_ngrams = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = "ngram-%s" % ngram_level).annotate(num_docs=Count('postkeyphraseassoc'))
+        source_ngrams = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = currentpage, method__name__exact = kp_source).annotate(num_docs=Count('postkeyphraseassoc'))
         print source_ngrams[1:10]
         print source_ngrams[0].num_docs
         print document_count
         for cur_ngram in source_ngrams:
             curidf = log(document_count / cur_ngram.num_docs)
-            kp, created = Keyphrase.objects.get_or_create(term=cur_ngram.term, method=kp_method, defaults={'val': str(curidf)})
+            kp, created = Keyphrase.objects.get_or_create(term=cur_ngram.term, method=kp_method, defaults={'val': str(curidf), 'normalized': cur_ngram.normalized})
             if created:
                 print kp
                 kp.save()
 
-    def processPageNGrams(self, currentpage):
+    def processPageExtract(self, currentpage):
         self._log.info("Starting processing on content in page %s" % currentpage.fb_page_name)
+
+        self.postagger = POSTagger(self.callbackPOS)
 
         posts = Post.objects.filter(page=currentpage).exclude(posttype__exact='comment')
         self._log.info("%s posts" % len(posts))
@@ -133,6 +140,71 @@ class Command(BaseCommand):
             for comment in comments:
                 self.processPost(comment)
 
+        # tag remaining posts
+        self.postagger.enqueue(forceProcessing=True)
+
+    def callbackPOS(self, opost, text, tagged):
+        valid_keyphrases = self.extractKeyphrases(tagged)
+        kp_method = KeyphraseMethod.objects.get(name="pos_sequence")
+
+        for kp_text, kp_offset, kp_len in valid_keyphrases:
+            self._log.info('KP:%s' % kp_text)
+            kp, created = Keyphrase.objects.get_or_create(term=kp_text, method=kp_method, defaults={'val': "1.0", 'normalized': kp_text}) # TODO normalize these terms?
+            if created:
+                print kp
+                kp.save()
+            kp_assoc, created = PostKeyphraseAssoc.objects.get_or_create(post=opost, keyphrase=kp, offset=kp_offset, length=kp_len)
+            if created:
+                print kp_assoc
+                kp.save()
+
+    def sliceParallel(self, list_a, list_b, length):
+        for idx in range(len(list_a) - length):
+            yield [list_a[idx:idx + length], list_b[idx : idx+length], idx, length]
+
+    def extractKeyphrases(self, tagged):
+        kp_len_max = 5
+        kp_len_min = 2
+
+        tokens = []
+        tags = []
+        for token, tag, confidence in tagged:
+            tokens.append(token)
+            tags.append(tag)
+
+        kp_results = []
+
+        for kp_cur_len in reversed(range(kp_len_min, kp_len_max)):
+            for slice_tags, slice_tokens, offset, length in self.sliceParallel(tags, tokens, length=kp_cur_len):
+                if self.isKeyphraseSequence(slice_tags):
+                    self._log.info("Tag sequence (%s) for token sequence (%s) is considered a valid keyphrase" % (" ".join(slice_tokens), " ".join(slice_tags)))
+                    kp_results.append([" ".join(slice_tokens), offset, len(slice_tokens)])
+
+        return kp_results
+
+    def isKeyphraseSequence(self, tags):
+        all_nouns = True
+        seen_non_adj = False
+        all_nouns_after_adj = True
+        last_adj = -1
+
+        for idx in range(len(tags)):
+            tag = tags[idx]
+            if tag == 'A':
+                last_adj = idx
+            else:
+                seen_non_adj = True
+
+            if seen_non_adj and tag != 'N':
+                all_nouns_after_adj = False
+
+            if tag != 'N':
+                all_nouns = False
+
+        ends_with_noun = tags[len(tags)-1] == 'N'
+
+        return all_nouns or (all_nouns_after_adj and last_adj > -1)
+
     def processPost(self, post):
         if post.text is not None and post.text != "":
             curtext = post.text.encode('utf-8')
@@ -142,6 +214,9 @@ class Command(BaseCommand):
             self.processText(post, text)
 
     def processText(self, post, text):
+        # enqueue post for POS tag batch processing
+        tagged_text = self.postagger.enqueue(post, text)
+
         for cur_ngram_level in range(1, self.max_ngram_level+1):
             current_ngrams = nltk.ngrams(text, cur_ngram_level)
             self.storeNGrams(post, cur_ngram_level, current_ngrams)
@@ -188,8 +263,8 @@ class Command(BaseCommand):
 
     def normalizeNGram(self, tokens):
         if self.token_stemmer is None:
-            self.token_stemmer = nltk.PorterStemmer()
-            #self.token_stemmer = nltk.LancasterStemmer()
+            #self.token_stemmer = nltk.PorterStemmer()
+            self.token_stemmer = nltk.LancasterStemmer()
         #if self.token_lemmatizer is None:
             #self.token_lemmatizer = nltk.WordNetLemmatizer()
 
@@ -200,7 +275,7 @@ class Command(BaseCommand):
         return [w.lower() for w in tokens]
 
     def stripSpecialChars(self, word):
-        return word.strip("\r\n.,-+%?!$&/\\'`|:;)([]{}\t ")
+        return word.strip("\r\n.,-+%?!$&/\\'`|:;)([]{}\t\" ")
 
 class PageCrawler(object):
     def __init__(self, graph):
