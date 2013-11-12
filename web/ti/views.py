@@ -13,6 +13,7 @@ import ti
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 
+from django.utils.http import urlquote
 from django.contrib.auth import authenticate, login, logout
 from itertools import chain
 from django.db.models import Max, Min, Count, F
@@ -242,6 +243,7 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
             # prevent duplicates from multiple methods and 1-char terms
             if len(termdata['text']) > 1 and not termdata['text'] in added_terms:
                 added_terms.append(termdata['text'])
+                termdata['link'] = '/page/%s/search?q=%s' % ( page.id, urlquote(termdata['text']) )
                 jsonout['tags'].append(termdata)
 
     return
