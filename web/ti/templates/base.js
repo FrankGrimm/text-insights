@@ -44,5 +44,16 @@ $(document).ready(function(){
     });
     $('#jumpToTop').hide();
 
+    // AJAX activity display
+    $('#ajaxload').hide();
+
+    $(document).bind('ajaxStart', function() {
+        console.log('ajaxStart');
+        $('#ajaxload').show();
+    }).bind('ajaxStop', function() {
+        console.log('ajaxStop');
+        $('#ajaxload').hide();
+    });
+
 });
 })(jQuery);

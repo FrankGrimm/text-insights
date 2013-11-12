@@ -41,6 +41,7 @@
 
   </head>
   <body>
+    <img src="{% static "ajax-loader.gif" %}" id="ajaxload" alt="AJAX" />
     <div class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container-fluid">

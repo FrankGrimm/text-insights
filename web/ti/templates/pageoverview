@@ -23,9 +23,12 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+    // gather data for global tag cloud
     $.get("/json", {tags: "all", page: {{ page.id }}, month: -1, year: -1, level: 2}, function(data) {
         $("div#wordcloud_global").jQCloud(data.tags);
     }, "json");
+
+    // Post type chart
     var posttypes = {% autoescape off %} {{ posttypes_json }} {% endautoescape %} 
     var posttype_data = []
     for (var posttype in posttypes) {
@@ -70,10 +73,7 @@ $(document).ready(function() {
             }
         }); 
 
-
-
-    // TODO ajax start/end listeners
-
+    // initiate JSON download for each monthly section
     $(".wordcloud").each(function() {
        var req_month = $(this).data('month');
        var req_year = $(this).data('year');
@@ -97,6 +97,7 @@ $(document).ready(function() {
         });        
     });
 
+    // page history chart
     var ph_posts = [];
     var ph_comments = [];
     var ph_uniques = [];
@@ -173,7 +174,6 @@ $(document).ready(function() {
     });
 
     $("button.post_show").click(function() {
-        debugger;
         $("#" + $(this).data('target')).find('li.ui-helper-hidden').removeClass('ui-helper-hidden');
         $(this).hide();
     });

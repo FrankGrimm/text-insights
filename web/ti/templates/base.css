@@ -29,6 +29,13 @@ div.month_caption {
     font-style: italic;
 }
 
+/* jQuery ajax events */ 
+img#ajaxload {
+    position: fixed;
+    left: 2em;
+    top: 3.5em;
+}
+
 /* post display */
 
 ul.jumptomonth {
