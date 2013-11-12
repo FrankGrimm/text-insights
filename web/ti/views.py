@@ -246,6 +246,10 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
                 termdata['link'] = '/page/%s/search?q=%s' % ( page.id, urlquote(termdata['text']) )
                 jsonout['tags'].append(termdata)
 
+    # sort resulting tag-set by weight
+    N_total = 50
+    jsonout['tags'] = [ x for x in list(reversed(sorted(jsonout['tags'], key=lambda cur: cur['weight'])))[:N_total] ]
+
     return
 
 

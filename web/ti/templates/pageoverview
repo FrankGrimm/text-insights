@@ -80,7 +80,9 @@ $(document).ready(function() {
 
         $.get("/json", {tags: "all", page: {{ page.id }}, month: req_month, year: req_year, level: 2}, function(data) {
             var target = "#wordcloud_monthly_" + req_month + "_" + req_year + "";
-            $(target).jQCloud(data.tags);
+            $(target).jQCloud(data.tags, {
+                removeOverflowing: true
+            });
         }, "json");
     });
 
