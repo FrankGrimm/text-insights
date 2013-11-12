@@ -12,8 +12,8 @@
     {% for page in pages %}
     <div class="row-fluid">
         <div class="span4 offset1">
-            <h3><a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h3>
-            <p>Last update: {{ page.last_updated }}
+            <h3><a href="/page/{{ page.id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a></h3>
+            <p>Last update: {{ page.last_updated }} | Visit page at: <a href="http://facebook.com/{{ page.fb_page_id }}" title="{{ page.fb_page_name }}">{{ page.fb_page_name }}</a>
             </p>
         </div>
         <div class="span3 offset1">
