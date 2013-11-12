@@ -21,7 +21,7 @@ __pycache__
 
 *.pyc
 *.py~
-.swp
+*.swp
 
 # Installer logs
 pip-log.txt
