@@ -36,6 +36,18 @@ img#ajaxload {
     top: 3.5em;
 }
 
+
+/* timespan chooser */
+form#form_change_timespan {
+    display: inline;
+    height: 1.2em;
+    line-height: 1.2em;
+}
+
+form#form_change_timespan input {
+    display: inline;
+}
+
 /* post display */
 
 ul.jumptomonth {
@@ -73,6 +85,10 @@ p.comments_nocomments {
 }
 
 button.comment_toggle {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+a.post_details_link {
     margin-top: 0;
     margin-bottom: 1em;
 }

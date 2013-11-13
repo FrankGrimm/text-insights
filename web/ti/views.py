@@ -28,7 +28,7 @@ def home(request):
     return render(request, 'pagelist', ctx, content_type="text/html")
 
 @login_required
-def page_info(request, page_id=None):
+def page_info(request, page_id=None, single_post_id=None):
     if page_id is None:
         raise Exception("Invalid page id")
     ctx = {}
@@ -36,20 +36,53 @@ def page_info(request, page_id=None):
     # add page meta-information
     page = ctx['page'] = Page.objects.get(id=page_id)
 
-    # add general information on posts
-    minmax = Post.objects.filter(page__exact=page).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
-    ctx['firstpost_dt'], ctx['lastpost_dt'] = minmax['dt_first'], minmax['dt_last']
-    ctx['postcount'] = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').count()
-    ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment').count()
+    if single_post_id is None:
+        # add general information on posts
+        pdt_from = None
+        pdt_to = None
+        ctx['dt_from'] = ''
+        ctx['dt_to'] = ''
+        if 'from' in request.GET and 'to' in request.GET:
+            pdt_from = request.GET['from']
+            ctx['dt_from'] = pdt_from
+            pdt_to = request.GET['to']
+            ctx['dt_to'] = pdt_to
 
-    page_info_posttypecounts(page, ctx)
-    page_info_posts(page, ctx)
+        if pdt_from is not None:
+            minmax = Post.objects.filter(page__exact=page, createtime__gte=pdt_from, createtime__lte=pdt_to).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
+            ctx['postcount'] = Post.objects.filter(page__exact=page, createtime__gte=pdt_from, createtime__lte=pdt_to).exclude(posttype__exact='comment').count()
+            ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment', createtime__gte=pdt_from, createtime__lte=pdt_to).count()
+        else:
+            minmax = Post.objects.filter(page__exact=page).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
+            ctx['postcount'] = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').count()
+            ctx['commentcount'] = Post.objects.filter(page__exact=page, posttype__exact='comment').count()
 
-    return render(request, 'pageoverview', ctx, content_type="text/html")
+        ctx['firstpost_dt'], ctx['lastpost_dt'] = minmax['dt_first'], minmax['dt_last']
 
-def page_info_posts(page, ctx):
+        page_info_posttypecounts(page, ctx, dt_from = pdt_from, dt_to = pdt_to)
+        page_info_posts(page, ctx, dt_from = pdt_from, dt_to = pdt_to)
+        ctx['singlepost'] = False
+
+        return render(request, 'pageoverview', ctx, content_type="text/html")
+    else:
+        ctx['singlepost'] = True
+        page_info_posts(page, ctx, single_post_id)
+        ctx['post_id'] = single_post_id
+        return render(request, 'singlepost', ctx, content_type="text/html")
+
+def page_info_posts(page, ctx, single_post_id=None, dt_from=None, dt_to=None):
     # all posts for this page
-    posts = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+    if single_post_id is None:
+        if dt_from is not None and dt_to is not None:
+            # time range restriction
+            posts = Post.objects.filter(page__exact=page, createtime__gte=dt_from, createtime__lte=dt_to).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+        else:
+            # default to all posts
+            posts = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+
+    else:
+        # single post
+        posts = Post.objects.filter(page__exact=page, id__exact=single_post_id).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
 
     # add monthly statistics
     months = {}
@@ -98,14 +131,19 @@ def page_info_posts(page, ctx):
     ctx['posts_by_month'] = posts_by_month
     ctx['posts'] = posts
 
-def page_info_posttypecounts(page, ctx):
+def page_info_posttypecounts(page, ctx, dt_from = None, dt_to = None):
     # add counts of different post types
-    typecounts = Post.objects.filter(page__exact=page).values('posttype').annotate(Count('posttype'))
+    if dt_from is not None:
+        typecounts = Post.objects.filter(page__exact=page, createtime__gte=dt_from, createtime__lte=dt_to).values('posttype').annotate(Count('posttype'))
+    else:
+        typecounts = Post.objects.filter(page__exact=page).values('posttype').annotate(Count('posttype'))
+
     posttypes = {}
     for typecount in typecounts:
         posttypes[typecount['posttype']] = typecount['posttype__count']
     ctx['posttypes'] = posttypes
-    del posttypes['comment']
+    if 'comment' in posttypes:
+        del posttypes['comment']
     posttypes_json = {}
     for ptype in posttypes:
         posttypes_json["%s (%s)" % (ptype, posttypes[ptype])] = posttypes[ptype]
@@ -170,8 +208,8 @@ def json_serve(request):
 
     targetposts = None
     # switch which data range to query
-    if 'post_id' in request.GET: # single post
-        parentpost = Post.objects.get(page=currentpage, id=request.GET['post_id'])
+    if 'post' in request.GET: # single post
+        parentpost = Post.objects.get(page=currentpage, id=request.GET['post'])
         targetposts = []
         targetposts.append(parentpost)
         for comment in Post.objects.filter(page=currentpage, parent=parentpost):
@@ -187,6 +225,11 @@ def json_serve(request):
             post_filters['createtime__year'] = year
         if month != '-1':
             post_filters['createtime__month'] = month
+
+        if 'from' in request.GET and 'to' in request.GET:
+            post_filters['createtime__gte'] = request.GET['from']
+            post_filters['createtime__lte'] = request.GET['to']
+
         targetposts = Post.objects.filter(**post_filters)
 
     # load all comments to these posts
