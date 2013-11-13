@@ -226,7 +226,7 @@ def json_serve(request):
         if month != '-1':
             post_filters['createtime__month'] = month
 
-        if 'from' in request.GET and 'to' in request.GET:
+        if 'from' in request.GET and 'to' in request.GET and request.GET['from'] != '' and request.GET['to'] != '':
             post_filters['createtime__gte'] = request.GET['from']
             post_filters['createtime__lte'] = request.GET['to']
 
