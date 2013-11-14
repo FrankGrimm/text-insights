@@ -156,6 +156,57 @@ class PageCrawler(object):
                 else:
                     log.info("Comment %s already stored" % comment.id)
 
+    def processComments(self, pagedata, targetlist, postdata, isPage=True):
+        graph = self.graph
+        log = self._log
+
+        if isPage:
+            if len(postdata['comments']) == 0:
+                log.info("Post %s does not have comments. Aborting." % post['id'])
+                return
+
+            # add comments that are already contained in the page feed
+            self.addData(postdata["comments"]["data"], targetlist)
+            log.info("Added comments from page feed (length: %s)" % len(targetlist))
+
+            if len(postdata['comments']) == 0:
+                return
+        else:
+            if 'data' in pagedata:
+                self.addData(pagedata['data'], targetlist)
+                log.info("Added data for comment page (new length: %s)" % len(targetlist))
+
+        log.info("Post %s contains %s comments." % (postdata['id'], len(postdata['comments'])))
+
+        if isPage:
+            parent = postdata['comments']
+        else:
+            parent = pagedata
+
+        if 'paging' in parent and 'next' in parent['paging']:
+            nextpage = parent['paging']['next']
+            nextpage, nextpage_args = self.getGraphRequest(nextpage)
+            log.info('Found comment paging link: %s' % nextpage)
+
+            commentfeed = graph.request(nextpage, nextpage_args)
+            time.sleep(1)
+
+            self.processComments(commentfeed, targetlist, postdata, isPage=False)
+
+
+    def getGraphRequest(self, nextpage):
+        if nextpage.startswith("https://graph.facebook.com/"):
+                print nextpage
+                nextpage = urlparse.urlparse(nextpage)
+                qs = cgi.parse_qs(nextpage.query)
+                print qs
+                #del qs['access_token']
+                nextpage = nextpage.path #+ "?" + urllib.urlencode(qs, True)
+                nextpage = nextpage[1:]
+                nextpage_args = qs
+
+        return nextpage, nextpage_args
+
     def processFeed(self, pagefeed):
 
         graph = self.graph
@@ -169,17 +220,7 @@ class PageCrawler(object):
         self.pagecount = self.pagecount + 1
         try:
             nextpage = pagefeed["paging"]["next"]
-
-            if nextpage.startswith("https://graph.facebook.com/"):
-                print nextpage
-                nextpage = urlparse.urlparse(nextpage)
-                qs = cgi.parse_qs(nextpage.query)
-                print qs
-                #del qs['access_token']
-                nextpage = nextpage.path #+ "?" + urllib.urlencode(qs, True)
-                nextpage = nextpage[1:]
-                nextpage_args = qs
-
+            nextpage, nextpage_args = self.getGraphRequest(nextpage)
         except KeyError:
             # no next page
             log.info("Hit last page. Aborting.")
@@ -234,9 +275,8 @@ class PageCrawler(object):
                 pass
 
             if comments is not None:
-                self.addData(comments, p.comments)
+                self.processComments(data, p.comments, postdata)
 
-            self._log.info("%s" % p)
             for comment in p.comments:
                 comment.post = p
 
