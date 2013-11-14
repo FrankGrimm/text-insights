@@ -139,7 +139,14 @@ class PageCrawler(object):
         for post in self.posts:
             postts = parser.parse(post.timestamp).replace(tzinfo=None)
             postuser = models.User.objects.get(id=long(post.user["id"]))
-            postobj, created = models.Post.objects.get_or_create(fb_post_id=post.id, defaults={'posttype': post.type, 'text': post.content, 'createtime': postts, 'parent': None, 'page': p, 'createuser': postuser, 'likes': post.likecount})
+            postobj = None
+            created = False
+            try:
+                postobj, created = models.Post.objects.get_or_create(fb_post_id=post.id, defaults={'posttype': post.type, 'text': post.content, 'createtime': postts, 'parent': None, 'page': p, 'createuser': postuser, 'likes': post.likecount})
+            except Exception, e: # ignore UTF-(>8) postings
+                log.warn("Failed to import post")
+                log.warn(e)
+
             if created:
                 postobj.save()
                 log.info("Post %s saved to database" % post.id)
@@ -149,7 +156,14 @@ class PageCrawler(object):
             for comment in post.comments:
                 commentts = parser.parse(comment.timestamp).replace(tzinfo=None)
                 commentuser = models.User.objects.get(id=long(comment.user["id"]))
-                commentobj, created = models.Post.objects.get_or_create(fb_post_id=comment.id, defaults={'posttype': comment.type, 'text': comment.content, 'createtime': commentts, 'parent': postobj, 'page': p, 'createuser': commentuser, 'likes': comment.likecount})
+                commentobj = None
+                created = False
+                try:
+                    commentobj, created = models.Post.objects.get_or_create(fb_post_id=comment.id, defaults={'posttype': comment.type, 'text': comment.content, 'createtime': commentts, 'parent': postobj, 'page': p, 'createuser': commentuser, 'likes': comment.likecount})
+                except Exception, e: # ignore UTF-(>8) postings
+                    log.warn("Failed to import comment")
+                    log.warn(e)
+
                 if created:
                     commentobj.save()
                     log.info("Comment %s saved to database" % comment.id)
@@ -250,6 +264,7 @@ class PageCrawler(object):
                 type = "comment"
 
             user = dict(id=postdata["from"]["id"], name=postdata["from"]["name"])
+            self.anon.getUserId(user) # add to userlist
             content = ""
             try:
                 content = postdata["message"]
