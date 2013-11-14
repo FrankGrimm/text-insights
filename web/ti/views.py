@@ -249,10 +249,10 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
 
     # gather terms
     term_results = {}
-    for ngram_level in range(1, 3):
-        kp_term_method = KeyphraseMethod.objects.get(name='ngram-%s' % ngram_level)
-        kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
-        term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
+    #for ngram_level in range(1, 3):
+    #    kp_term_method = KeyphraseMethod.objects.get(name='ngram-%s' % ngram_level)
+    #    kp_method_idf = KeyphraseMethod.objects.get(name="idf-%s" % ngram_level)
+    #    term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
 
     kp_term_method = KeyphraseMethod.objects.get(name='pos_sequence')
     kp_method_idf = KeyphraseMethod.objects.get(name='idf-pos')
@@ -271,8 +271,10 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
         # normalize weights to [0:100]
         for item in term_results[method_name]:
             prev_w = item['weight']
-            item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
-            # weight down unigrams
+            if (maxval - minval) > 0.0: # TODO check for single postings
+                item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
+
+           # weight down unigrams
             if method_name == 'ngram-1':
                 item['weight'] = item['weight'] * 0.9
 
