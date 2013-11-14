@@ -7,11 +7,13 @@ from ti.models import *
 from django.db.models.query import QuerySet
 from django.db.models import Max, Min, Count
 
-
+from decimal import Decimal, Context, Inexact
+import json
 from math import log
 import logging
 from dateutil import parser
 import urllib
+import urllib2
 import urlparse
 import cgi
 import subprocess
@@ -48,7 +50,7 @@ class Command(BaseCommand):
             pages = Page.objects.all()
             for page in pages:
                 self._log.info("Page #%s: %s" % (page.id, page.fb_page_name))
-            raise CommandError('Invalid arguments. Expected: <page_id> <action>, where action might be: extract, tfidf')
+            raise CommandError('Invalid arguments. Expected: <page_id> <action>, where action might be: extract, tfidf, webidf')
 
 
         page_id = args[0]
@@ -68,6 +70,8 @@ class Command(BaseCommand):
             self.processPageExtract(page)
         elif action == "tfidf":
             self.processTfIdf(page)
+        elif action == "webidf":
+            self.processWebIdf(page)
         else:
             self._log.warn("Unknown action: %s" % action)
 
@@ -86,6 +90,43 @@ class Command(BaseCommand):
             if not word is None and word != '' and not word in res:
                 res[word] = True
         self.stop_words = res
+
+    #http://stackoverflow.com/questions/16080952/django-cannot-convert-float-to-decimal-first-convert-the-float-to-a-string
+    def float_to_decimal(self, f):
+        "Convert a floating point number to a Decimal with no loss of information"
+        n, d = f.as_integer_ratio()
+        numerator, denominator = Decimal(n), Decimal(d)
+        ctx = Context(prec=60)
+        result = ctx.divide(numerator, denominator)
+        while ctx.flags[Inexact]:
+            ctx.flags[Inexact] = False
+            ctx.prec *= 2
+            result = ctx.divide(numerator, denominator)
+        return result
+
+
+    def processWebIdf(self, currentpage):
+        kp_method_source = KeyphraseMethod.objects.get(name='pos_sequence')
+        kp_method, created = KeyphraseMethod.objects.get_or_create(name='webidf_wiki')
+        for cur_kp in Keyphrase.objects.filter(method=kp_method_source).all():
+            kp_term = "\"" + cur_kp.term.encode('utf-8') + "\""
+            apiurl = "http://en.wikipedia.org/w/api.php?action=query&list=search&" + urllib.urlencode({'srsearch': kp_term}, True) + "&srprop=timestamp&format=json"
+            json_response = urllib2.urlopen(apiurl)
+            res = json.loads(json_response.read())
+            if 'query' in res and 'searchinfo' in res['query'] and 'totalhits' in res['query']['searchinfo']:
+                idftotal = float(res['query']['searchinfo']['totalhits']) / float(4376448)
+                kps, created = Keyphrase.objects.get_or_create(term=cur_kp.term, method=kp_method, defaults={'val': self.float_to_decimal(idftotal)})
+                if created:
+                    self._log.info("Keyphrase \"%s\" <- %s (created)" % (kps.term, kps.val))
+                else:
+                    self._log.info("Keyphrase \"%s\" <- %s" % (kps.term, kps.val))
+            else:
+                self._log.warn("Invalid JSON response:")
+                print json_result
+                exit()
+
+        #kp_method = KeyphraseMethod.objects.get(name='webidf-wiki')
+        #kps = Keyphrase.objects.get_or_create(term=cur8'term', method=kp_method, defaults={'val': str(curcount)0)
 
     def processTfIdf(self, currentpage):
         for ngram_level in range(1, self.max_ngram_level+1):
