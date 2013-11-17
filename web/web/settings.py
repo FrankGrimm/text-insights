@@ -197,3 +197,11 @@ POS_TAGGER={
     'command': '~/ark-tweet-nlp-0.3.2/runTagger.sh --quiet --input-format text --output-format conll',
     'max_queue': 40
 }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+    }
+}
+
