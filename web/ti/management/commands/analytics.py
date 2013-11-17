@@ -189,8 +189,8 @@ class Command(BaseCommand):
         kp_method = KeyphraseMethod.objects.get(name="pos_sequence")
 
         for kp_text, kp_offset, kp_len in valid_keyphrases:
-            if kp_text == opost.page.name.lower():
-                continue # skip terms that equal the page name
+            if opost.page.name.lower() in kp_text:
+                continue # skip terms that contain the page name
             self._log.info('KP:%s' % kp_text)
             kp, created = Keyphrase.objects.get_or_create(term=kp_text, method=kp_method, defaults={'val': "1.0", 'normalized': kp_text}) # TODO normalize these terms?
             if created:
