@@ -16,16 +16,21 @@ from django.views.decorators.cache import never_cache
 from django.utils.http import urlquote
 from django.contrib.auth import authenticate, login, logout
 from itertools import chain
-from django.db.models import Max, Min, Count, F
+from django.db.models import Max, Min, Count, F, Q
 from ti.models import *
+import urllib
 import json
-
+from random import random
 import operator
 
 @login_required
 def home(request):
     ctx = {'pages': Page.objects.all}
     return render(request, 'pagelist', ctx, content_type="text/html")
+
+@login_required
+def user_info(request):
+    return ""
 
 @login_required
 def page_info(request, page_id=None, single_post_id=None):
@@ -40,13 +45,18 @@ def page_info(request, page_id=None, single_post_id=None):
         # add general information on posts
         pdt_from = None
         pdt_to = None
+
+        ctx['searchterm'] = ''
+        if 'q' in request.GET:
+            ctx['searchterm'] = urllib.unquote(request.GET['q'].strip())
+
         ctx['dt_from'] = ''
         ctx['dt_to'] = ''
         if 'from' in request.GET and 'to' in request.GET:
-            pdt_from = request.GET['from']
             ctx['dt_from'] = pdt_from
-            pdt_to = request.GET['to']
             ctx['dt_to'] = pdt_to
+            pdt_from = request.GET['from']
+            pdt_to = request.GET['to']
 
         if pdt_from is not None:
             minmax = Post.objects.filter(page__exact=page, createtime__gte=pdt_from, createtime__lte=pdt_to).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))
@@ -60,7 +70,7 @@ def page_info(request, page_id=None, single_post_id=None):
         ctx['firstpost_dt'], ctx['lastpost_dt'] = minmax['dt_first'], minmax['dt_last']
 
         page_info_posttypecounts(page, ctx, dt_from = pdt_from, dt_to = pdt_to)
-        page_info_posts(page, ctx, dt_from = pdt_from, dt_to = pdt_to)
+        page_info_posts(page, ctx, dt_from = pdt_from, dt_to = pdt_to, q=ctx['searchterm'])
         ctx['singlepost'] = False
 
         return render(request, 'pageoverview', ctx, content_type="text/html")
@@ -70,19 +80,63 @@ def page_info(request, page_id=None, single_post_id=None):
         ctx['post_id'] = single_post_id
         return render(request, 'singlepost', ctx, content_type="text/html")
 
-def page_info_posts(page, ctx, single_post_id=None, dt_from=None, dt_to=None):
+def getKeyphrasePosts(page, q):
+    matching_posts = PostKeyphraseAssoc.objects.filter(post__page__exact=page, keyphrase__term__exact=q).values('post__id')
+    postlist = Post.objects.filter(Q(id__in=matching_posts) | Q(parent__in=matching_posts))
+    return matching_posts
+
+def getCommenters(page, q):
+    posts = Post.objects.filter(id__in=PostKeyphraseAssoc.objects.filter(post__page__exact=page, keyphrase__term__exact=q).values('post__id')).prefetch_related('createuser').all()
+    res = {}
+    for post in posts:
+        al = post.createuser.alias
+        if 'page-' in al:
+            continue
+        if al in res:
+            res[al] = res[al] + 1.0
+        else:
+            res[al] = 1.0 + random()*0.1
+
+    commenter_data = []
+    for alias in res:
+        nres = {'text': alias, 'weight': res[alias]}
+        commenter_data.append(nres)
+    return [x for x in list(reversed(sorted(commenter_data, key=lambda cur: cur['weight'])))[:10]]
+
+def page_info_posts(page, ctx, single_post_id=None, dt_from=None, dt_to=None, q=None):
+    if q is not None and q == '':
+        q = None
+
     # all posts for this page
     if single_post_id is None:
-        if dt_from is not None and dt_to is not None:
-            # time range restriction
-            posts = Post.objects.filter(page__exact=page, createtime__gte=dt_from, createtime__lte=dt_to).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+        if q is not None:
+            keyword_postlist = getKeyphrasePosts(page, q)
+
+            commenter_info = getCommenters(page, q)
+            #commenter_info = [x for x in list(reversed( sorted(commenter_info, key=commenter_info.get) ))[:10]]
+            ctx['commentercounts'] = json.dumps(commenter_info)
+
+
+            if dt_from is not None and dt_to is not None:
+              # time range restriction
+                posts = Post.objects.filter(page__exact=page, id__in=keyword_postlist, createtime__gte=dt_from, createtime__lte=dt_to).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+            else:
+                # default to all posts
+                posts = Post.objects.filter(page__exact=page, id__in=keyword_postlist).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+
         else:
-            # default to all posts
-            posts = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+            if dt_from is not None and dt_to is not None:
+                # time range restriction
+                posts = Post.objects.filter(page__exact=page, createtime__gte=dt_from, createtime__lte=dt_to).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+            else:
+                # default to all posts
+                posts = Post.objects.filter(page__exact=page).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
 
     else:
         # single post
         posts = Post.objects.filter(page__exact=page, id__exact=single_post_id).exclude(posttype__exact='comment').order_by('createtime').prefetch_related('createuser').all()
+
+    ctx['totalposts'] = len(posts)
 
     # add monthly statistics
     months = {}
@@ -200,6 +254,12 @@ def json_serve(request):
     page_id = request.GET['page']
     which_tags = request.GET['tags']
 
+    q = None
+    if 'q' in request.GET:
+        q = request.GET['q'].strip()
+        if q == '':
+            q = None
+
     currentpage = Page.objects.get(id=page_id)
 
     response_data = {
@@ -226,9 +286,13 @@ def json_serve(request):
         if month != '-1':
             post_filters['createtime__month'] = month
 
-        if 'from' in request.GET and 'to' in request.GET and request.GET['from'] != '' and request.GET['to'] != '':
+        if 'from' in request.GET and 'to' in request.GET and request.GET['from'] != '' and request.GET['to'] != '' and request.GET['from'] != 'None':
             post_filters['createtime__gte'] = request.GET['from']
             post_filters['createtime__lte'] = request.GET['to']
+
+        if q is not None:
+            keyword_postlist = getKeyphrasePosts(currentpage, q)
+            post_filters['id__in'] = keyword_postlist
 
         targetposts = Post.objects.filter(**post_filters)
 
@@ -236,12 +300,12 @@ def json_serve(request):
     targetposts = list(chain(targetposts, Post.objects.filter(parent__in=targetposts)))
     # TODO eval which_tags
 
-    get_tags(currentpage, targetposts, response_data)
+    get_tags(currentpage, targetposts, response_data, excludeKeyphrase=q)#, lengthfactor = 1.2, idf_method='webidf_wiki')
     resp = HttpResponse(json.dumps(response_data), content_type="application/json")
     return resp
 
 # targetcolumn = {'normalized', 'term'}
-def get_tags(page, posts, jsonout, target_column = 'normalized'):
+def get_tags(page, posts, jsonout, target_column = 'normalized', idf_method='idf-pos', lengthfactor=1.0, excludeKeyphrase=None):
     global stop_words
     if stop_words is None:
         stop_words = read_stop_words()
@@ -255,8 +319,8 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
     #    term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
 
     kp_term_method = KeyphraseMethod.objects.get(name='pos_sequence')
-    kp_method_idf = KeyphraseMethod.objects.get(name='idf-pos')
-    term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column)
+    kp_method_idf = KeyphraseMethod.objects.get(name=idf_method)
+    term_results[kp_term_method.name] = get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column, lengthfactor, exclude=excludeKeyphrase)
 
     totaltags = 0
     for method_name in term_results:
@@ -270,13 +334,13 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
         maxval = max(term_results[method_name], key=(lambda item: item['weight']))['weight']
         # normalize weights to [0:100]
         for item in term_results[method_name]:
-            prev_w = item['weight']
-            if (maxval - minval) > 0.0: # TODO check for single postings
-                item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
+           prev_w = item['weight']
+           if (maxval - minval) > 0.0: # TODO check for single postings
+               item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
 
            # weight down unigrams
-            if method_name == 'ngram-1':
-                item['weight'] = item['weight'] * 0.9
+           if method_name == 'ngram-1':
+               item['weight'] = item['weight'] * 0.9
 
     jsonout['postcount'] = len(posts)
     jsonout['tagsshown'] = len(res)
@@ -288,7 +352,7 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
             # prevent duplicates from multiple methods and 1-char terms
             if len(termdata['text']) > 1 and not termdata['text'] in added_terms:
                 added_terms.append(termdata['text'])
-                termdata['link'] = '/page/%s/search?q=%s' % ( page.id, urlquote(termdata['text']) )
+                termdata['link'] = '/page/%s?q=%s' % ( page.id, urlquote(termdata['text']) )
                 jsonout['tags'].append(termdata)
 
     # sort resulting tag-set by weight
@@ -298,11 +362,16 @@ def get_tags(page, posts, jsonout, target_column = 'normalized'):
     return
 
 
-def get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column):
+def get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column, lengthfactor, exclude=None):
 
     # gather TF values (raw)
-    tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).values(target_column).distinct().annotate(dcount=Count(target_column))
-
+    if exclude is None:
+        tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).values(target_column).distinct().annotate(dcount=Count(target_column))
+    else:
+        if target_column == 'normalized':
+            tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).exclude(normalized__exact=exclude).values(target_column).distinct().annotate(dcount=Count(target_column))
+        else:
+            tfs = Keyphrase.objects.filter(postkeyphraseassoc__post__page__exact = page, postkeyphraseassoc__post__in=posts, method = kp_term_method).exclude(term__exact=exclude).values(target_column).distinct().annotate(dcount=Count(target_column))
     res = []
 
     termlist = []
@@ -352,9 +421,12 @@ def get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column
             if tf['idf'] == 0.0:
                 weight = 'NA'
             else:
-                weight = tf['tf'] * tf['idf']
+                if lengthfactor == 1.0:
+                    weight = tf['tf'] * tf['idf']
+                else:
+                    weight = len(unicode(tf[target_column]).split(" ")) ** lengthfactor * tf['tf'] * tf['idf']
 
-        if weight == 'NA':
+        if weight == 'NA' or tf[target_column] == exclude:
             continue
 
         nres = {'text': tf[target_column], 'weight': weight, 'tf': tf['dcount'], 'idf': tf['idf'], 'method': kp_term_method.name }

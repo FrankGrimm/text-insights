@@ -22,7 +22,10 @@ import time
 import random
 import string
 import datetime
+
 import nltk
+from nltk.tokenize.regexp import WhitespaceTokenizer
+
 import os
 from django.conf import settings
 from postagger import POSTagger
@@ -189,10 +192,10 @@ class Command(BaseCommand):
         kp_method = KeyphraseMethod.objects.get(name="pos_sequence")
 
         for kp_text, kp_offset, kp_len in valid_keyphrases:
-            if opost.page.name.lower() in kp_text:
+            if opost.page.fb_page_name.lower() in kp_text:
                 continue # skip terms that contain the page name
             self._log.info('KP:%s' % kp_text)
-            kp, created = Keyphrase.objects.get_or_create(term=kp_text, method=kp_method, defaults={'val': "1.0", 'normalized': kp_text}) # TODO normalize these terms?
+            kp, created = Keyphrase.objects.get_or_create(term=kp_text, method=kp_method, defaults={'val': "1.0", 'normalized': kp_text})
             if created:
                 print kp
                 kp.save()
@@ -207,7 +210,7 @@ class Command(BaseCommand):
 
     def extractKeyphrases(self, tagged):
         kp_len_max = 5
-        kp_len_min = 2
+        kp_len_min = 1
 
         tokens = []
         tags = []
@@ -217,11 +220,41 @@ class Command(BaseCommand):
 
         kp_results = []
 
-        for kp_cur_len in reversed(range(kp_len_min, kp_len_max)):
-            for slice_tags, slice_tokens, offset, length in self.sliceParallel(tags, tokens, length=kp_cur_len):
-                if self.isKeyphraseSequence(slice_tags):
-                    self._log.info("Tag sequence (%s) for token sequence (%s) is considered a valid keyphrase" % (" ".join(slice_tokens), " ".join(slice_tags)))
-                    kp_results.append([" ".join(slice_tokens), offset, len(slice_tokens)])
+        kp_start = -1
+        kp_end = -1
+        for idx in range(len(tags)):
+            tag = tags[idx]
+            # gather multi-term noun-phrases
+            if tag == 'N' and kp_start < 0:
+                kp_start = idx
+            elif tag == 'N' and kp_start >= 0:
+                kp_end = idx
+            elif tag != 'N' and kp_start >= 0:
+                if kp_end < 0:
+                    kp_end = kp_start
+                slice_tokens = tokens[kp_start:kp_end]
+                slice_tags = tags[kp_start:kp_end]
+                if len(slice_tokens) >= kp_len_min and len(slice_tokens) <= kp_len_max:
+                    slice_tokens = [self.stripSpecialChars(w) for w in slice_tokens]
+                    if self.isValidTokenSequence(slice_tokens):
+                        kp_cur = (" ".join(slice_tokens)).strip()
+                        if len(kp_cur) > 0:
+                            try:
+                                kp_cur = kp_cur.encode('ascii')
+                                self._log.info(">>> Tag sequence (%s) for token sequence (%s) is considered a valid keyphrase" % (kp_cur, " ".join(slice_tags)))
+                                kp_results.append([" ".join(slice_tokens), kp_start, len(slice_tokens)])
+                            except:
+                                self._log.info("Skipping non-ascii term %s" % kp_cur)
+
+                # reset state
+                kp_start = -1
+                kp_end = -1
+
+        #for kp_cur_len in reversed(range(kp_len_min, kp_len_max)):
+        #    for slice_tags, slice_tokens, offset, length in self.sliceParallel(tags, tokens, length=kp_cur_len):
+        #        if self.isKeyphraseSequence(slice_tags):
+        #            self._log.info("Tag sequence (%s) for token sequence (%s) is considered a valid keyphrase" % (" ".join(slice_tokens), " ".join(slice_tags)))
+        #            kp_results.append([" ".join(slice_tokens), offset, len(slice_tokens)])
 
         return kp_results
 
@@ -249,9 +282,10 @@ class Command(BaseCommand):
         return all_nouns or (all_nouns_after_adj and last_adj > -1)
 
     def processPost(self, post):
+        tokenizer = WhitespaceTokenizer()
         if post.text is not None and post.text != "":
             curtext = post.text.encode('utf-8')
-            tokens = [word for sent in nltk.sent_tokenize(curtext) for word in nltk.word_tokenize(sent)]
+            tokens = [word for sent in nltk.sent_tokenize(curtext) for word in tokenizer.tokenize(sent)]
             tokens = self.normalizeTokens(tokens)
             text = nltk.Text(tokens)
             self.processText(post, text)
@@ -271,7 +305,7 @@ class Command(BaseCommand):
         except ValueError:
             return False
 
-    def isValidNGram(self, curngram):
+    def isValidTokenSequence(self, curngram):
         for term in curngram:
             if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", "|", ":", ";", ")", "(", "[", "]", "{", "}"]:
                 return False
@@ -289,11 +323,20 @@ class Command(BaseCommand):
         curoffset = 0
         for curngram in ngram_coll:
             curoffset = curoffset + 1
-            if not self.isValidNGram(curngram):
+            if not self.isValidTokenSequence(curngram):
                 continue
             curngram = [self.stripSpecialChars(w) for w in curngram]
-            curterm = " ".join(curngram)
+            try:
+                curterm = " ".join(curngram).encode('utf-8')
+            except:
+                self._log.warn("Invalid encoding")
+                curterm = ""
             curterm_normalized = " ".join(self.normalizeNGram(curngram))
+            curterm = curterm.strip()
+            curterm_normalized = curterm_normalized.strip()
+
+            if curterm == "" or curterm_normalized == "":
+                continue
 
             kp, created = Keyphrase.objects.get_or_create(term=curterm, method=kp_method, defaults={'val': "1.0", 'normalized': curterm_normalized})
             if created:
