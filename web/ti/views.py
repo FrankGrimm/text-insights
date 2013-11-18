@@ -53,10 +53,10 @@ def page_info(request, page_id=None, single_post_id=None):
         ctx['dt_from'] = ''
         ctx['dt_to'] = ''
         if 'from' in request.GET and 'to' in request.GET:
-            ctx['dt_from'] = pdt_from
-            ctx['dt_to'] = pdt_to
             pdt_from = request.GET['from']
             pdt_to = request.GET['to']
+            ctx['dt_from'] = pdt_from
+            ctx['dt_to'] = pdt_to
 
         if pdt_from is not None:
             minmax = Post.objects.filter(page__exact=page, createtime__gte=pdt_from, createtime__lte=pdt_to).aggregate(dt_first=Min('createtime'), dt_last=Max('createtime'))

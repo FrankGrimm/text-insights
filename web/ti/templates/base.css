@@ -48,6 +48,19 @@ form#form_change_timespan input {
     display: inline;
 }
 
+div.input-daterange {
+    display: inline;
+}
+input.btn_showtime {
+    display: inline;
+    margin-left: 1em;
+}
+
+div.timerangefilter {
+    line-height: 4.2em;
+    height: 4.2em;
+}
+
 /* post display */
 
 ul.jumptomonth {

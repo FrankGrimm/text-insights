@@ -55,5 +55,10 @@ $(document).ready(function(){
         $('#ajaxload').hide();
     });
 
+    // setup datepicker defaults
+    $.fn.datepicker.defaults.weekStart = 1; // week start = Monday
+    $.fn.datepicker.defaults.format = "yyyy-mm-dd";
+    $("input.datepicker").datepicker();
+
 });
 })(jQuery);
