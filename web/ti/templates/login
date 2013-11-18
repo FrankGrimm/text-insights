@@ -5,7 +5,7 @@
 {% block maincontent %}
 <div class="container-fluid">
     <div class="row-fluid">
-        <div class="span3 offset5">
+        <div class="span2 offset5">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title">Please sign in</h3>
