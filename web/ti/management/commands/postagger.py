@@ -60,7 +60,8 @@ class POSTagger(object):
         self._log.info("Received tag-information for %s documents. Expected: %s" % (len(all_results), len(texts)))
         if (len(all_results) != len(texts)):
             self._log.warn("Assertion failed.")
-            exit()
+            return
+            #exit()
 
         for idx in range(len(all_results)):
             texts[idx].append(all_results[idx])

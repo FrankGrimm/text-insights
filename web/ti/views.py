@@ -8,10 +8,13 @@ from django.template import Context, loader
 from django.shortcuts import render, redirect
 import collections
 import datetime
+from dateutil.relativedelta import relativedelta
 import os
 import ti
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
+
+import pycountry
 
 from django.utils.http import urlquote
 from django.contrib.auth import authenticate, login, logout
@@ -107,6 +110,7 @@ def page_info_posts(page, ctx, single_post_id=None, dt_from=None, dt_to=None, q=
     if q is not None and q == '':
         q = None
 
+    ctx['commentercounts'] = "{}"
     # all posts for this page
     if single_post_id is None:
         if q is not None:
@@ -247,12 +251,16 @@ def read_stop_words():
     return res
 
 @login_required
-@never_cache
 def json_serve(request):
 
     # mandatory parameters: page, tags (type), level
     page_id = request.GET['page']
     which_tags = request.GET['tags']
+
+    removePagePosts = False
+    if 'pageowner' in request.GET:
+        if 'noremove' == request.GET['pageowner']:
+            removePagePosts = False
 
     q = None
     if 'q' in request.GET:
@@ -261,17 +269,22 @@ def json_serve(request):
             q = None
 
     currentpage = Page.objects.get(id=page_id)
+    pageowner = currentpage.owner
 
     response_data = {
         'page': currentpage.id,
     }
 
     targetposts = None
+    previousposts = None
+
     # switch which data range to query
     if 'post' in request.GET: # single post
         parentpost = Post.objects.get(page=currentpage, id=request.GET['post'])
         targetposts = []
-        targetposts.append(parentpost)
+        if not removePagePosts:
+            targetposts.append(parentpost)
+
         for comment in Post.objects.filter(page=currentpage, parent=parentpost):
             targetposts.append(comment)
         response_data['target'] = 'single_post'
@@ -281,35 +294,127 @@ def json_serve(request):
         response_data['target'] = "M=%s;Y=%s" % (month, year)
         post_filters = {'page': currentpage}
 
-        if year != '-1':
-            post_filters['createtime__year'] = year
-        if month != '-1':
-            post_filters['createtime__month'] = month
-
-        if 'from' in request.GET and 'to' in request.GET and request.GET['from'] != '' and request.GET['to'] != '' and request.GET['from'] != 'None':
-            post_filters['createtime__gte'] = request.GET['from']
-            post_filters['createtime__lte'] = request.GET['to']
-
+        # search filter
         if q is not None:
             keyword_postlist = getKeyphrasePosts(currentpage, q)
             post_filters['id__in'] = keyword_postlist
 
+        isSpecificMonth = False
+        isDateRange = False
+        if year != '-1':
+            post_filters['createtime__year'] = year
+        if month != '-1':
+            post_filters['createtime__month'] = month
+            isSpecificMonth = True
+
+        if 'from' in request.GET and 'to' in request.GET and request.GET['from'] != '' and request.GET['to'] != '' and request.GET['from'] != 'None':
+            post_filters['createtime__gte'] = request.GET['from']
+            post_filters['createtime__lte'] = request.GET['to']
+            isDateRange = True
+
+        prev_post_filters = None
+        if isSpecificMonth or isDateRange:
+            prev_post_filters = post_filters.copy()
+        if isSpecificMonth:
+            m = int(prev_post_filters['createtime__month'])
+            y = int(prev_post_filters['createtime__year'])
+            if m > -1:
+                m = m - 1
+                if m < 1:
+                    m = 12
+                    y = y -1
+            prev_post_filters['createtime__month'] = unicode(m)
+            prev_post_filters['createtime__year'] = unicode(y)
+
+        if isDateRange:
+            prev_post_filters['createtime__lte'] = prev_post_filters['createtime__gte']
+            fromdate = datetime.datetime.strptime(post_filters['createtime__gte'], '%Y-%m-%d')
+            fromdate = fromdate - relativedelta(month=3)
+            prev_post_filters['createtime__gte'] = str(fromdate)
+
+        if prev_post_filters is not None:
+            previousposts = Post.objects.filter(**prev_post_filters)
+
         targetposts = Post.objects.filter(**post_filters)
 
     # load all comments to these posts
-    targetposts = list(chain(targetposts, Post.objects.filter(parent__in=targetposts)))
-    # TODO eval which_tags
+    if removePagePosts:
+        targetposts = Post.objects.filter(parent__in=targetposts).exclude(createuser__exact=pageowner)
+    else:
+        targetposts = list(chain(targetposts, Post.objects.filter(parent__in=targetposts)))
 
     get_tags(currentpage, targetposts, response_data, excludeKeyphrase=q)#, lengthfactor = 1.2, idf_method='webidf_wiki')
+
+    # commenter info
+    response_data['genderinfo'] = {}
+    response_data['localeinfo'] = {}
+    get_commenter_info(currentpage, targetposts, response_data['genderinfo'], response_data['localeinfo'])
+    get_locale_metadata(response_data['localeinfo'])
+
+    if previousposts is not None:
+        if removePagePosts:
+            previousposts = Post.objects.filter(parent__in=previousposts).exclude(createuser__exact=pageowner)
+        else:
+            previousposts = list(chain(previousposts, Post.objects.filter(parent__in=previousposts)))
+        prev_tags = {}
+        existing_tags = {}
+        get_tags(currentpage, previousposts, prev_tags, excludeKeyphrase=q, allTags=existing_tags)
+        #return HttpResponse("%s %s" % (len(previousposts), existing_tags), content_type = 'text/plain')
+        if existing_tags and 'tags' in response_data:
+            mark_new_tags(prev_tags['tags'], response_data['tags'])
+
     resp = HttpResponse(json.dumps(response_data), content_type="application/json")
     return resp
 
+def get_locale_metadata(localeinfo):
+    clonelocale = localeinfo.copy()
+    for countrycode in clonelocale:
+        res = {'ccode': countrycode, 'count': clonelocale[countrycode]}
+        if countrycode != 'N/A':
+            res['cname'] = pycountry.countries.get(alpha2=countrycode).name
+            cinfo = CountryLocales.objects.filter(ccode=countrycode)
+            if cinfo is not None and len(cinfo) > 0:
+                res['lati'] = cinfo[0].lati
+                res['longi'] = cinfo[0].longi
+        localeinfo[countrycode] = res
+
+def get_commenter_info(cpage, postlist, genderinfo, localeinfo):
+    # TODO filter unique users
+    for cpost in postlist:
+        user_gender = cpost.createuser.gender
+        user_locale = cpost.createuser.locale
+        if user_locale != '':
+            try:
+                #user_locale = pycountry.countries.get(alpha2=user_locale[-2:]).name
+                user_locale = user_locale[-2:]
+            except Exception, e:
+                user_locale = 'N/A'
+        else:
+            user_locale = 'N/A'
+
+        if not user_gender in genderinfo:
+            genderinfo[user_gender] = 1
+        else:
+            genderinfo[user_gender] = genderinfo[user_gender] + 1
+        if not user_locale in localeinfo:
+            localeinfo[user_locale] = 1
+        else:
+            localeinfo[user_locale] = localeinfo[user_locale] + 1
+    if 'unknown' in genderinfo:
+        del genderinfo['unknown']
+
+def mark_new_tags(existing_tags, current):
+    for cur in current:
+        if cur['text'] in existing_tags:
+            cur['isnew'] = False
+        else:
+            cur['isnew'] = True
+
 # targetcolumn = {'normalized', 'term'}
-def get_tags(page, posts, jsonout, target_column = 'normalized', idf_method='idf-pos', lengthfactor=1.0, excludeKeyphrase=None):
+def get_tags(page, posts, jsonout, target_column = 'normalized', idf_method='idf-pos', lengthfactor=1.0, excludeKeyphrase=None, allTags=None):
     global stop_words
     if stop_words is None:
         stop_words = read_stop_words()
-
 
     # gather terms
     term_results = {}
@@ -330,10 +435,16 @@ def get_tags(page, posts, jsonout, target_column = 'normalized', idf_method='idf
         # only use the top 50 tags (max) per method
         term_results[method_name] = [x for x in list(reversed(sorted(res, key=lambda cur: cur['weight'])))[:N] if x['idf'] != 'NA']
         # get min/max
-        minval = min(term_results[method_name], key=(lambda item: item['weight']))['weight']
-        maxval = max(term_results[method_name], key=(lambda item: item['weight']))['weight']
+        try:
+            minval = min(term_results[method_name], key=(lambda item: item['weight']))['weight']
+            maxval = max(term_results[method_name], key=(lambda item: item['weight']))['weight']
+        except:
+            minval = 0.0
+            maxval = 0.0
         # normalize weights to [0:100]
         for item in term_results[method_name]:
+           if allTags is not None:
+                allTags[item['text']] = True
            prev_w = item['weight']
            if (maxval - minval) > 0.0: # TODO check for single postings
                item['weight'] = (prev_w - minval) * 100.0 / (maxval - minval)
@@ -354,13 +465,11 @@ def get_tags(page, posts, jsonout, target_column = 'normalized', idf_method='idf
                 added_terms.append(termdata['text'])
                 termdata['link'] = '/page/%s?q=%s' % ( page.id, urlquote(termdata['text']) )
                 jsonout['tags'].append(termdata)
-
     # sort resulting tag-set by weight
     N_total = 50
     jsonout['tags'] = [ x for x in list(reversed(sorted(jsonout['tags'], key=lambda cur: cur['weight'])))[:N_total] ]
 
     return
-
 
 def get_tags_by_method(page, posts, kp_term_method, kp_method_idf, target_column, lengthfactor, exclude=None):
 

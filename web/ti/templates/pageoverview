@@ -2,6 +2,7 @@
 {% load static from staticfiles %}
 {% load dictget %}
 {% load posttype %}
+{% load highlight %}
 {% load humanize %}
 {% block title %}Page &quot;{{ page.fb_page_name }}&quot; | Text Insights{% endblock %}
 
@@ -12,7 +13,7 @@
 
 {% block scriptadd %}
 <script src="{% static "tagcloud/js/tinysort.js" %}"></script>
-<script src="{% static "jqcloud/jqcloud-1.0.4.min.js" %}"></script>
+<script src="{% static "jqcloud/jqcloud-1.0.4.js" %}"></script>
 <!--[if lt IE 9]><script language="javascript" type="text/javascript" src="{% static "jqplot/excanvas.js" %}"></script><![endif]-->
 <script language="javascript" type="text/javascript" src="{% static "jqplot/jquery.jqplot.min.js" %}"></script>
 <script type="text/javascript" src="{% static "jqplot/plugins/jqplot.pieRenderer.min.js" %}"></script>
@@ -23,15 +24,29 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
+
+    var mapLocales = {};
+
     {% if searchterm == '' %}
     // gather data for global tag cloud
     $.get("/json", {tags: "all", page: {{ page.id }}, month: -1, year: -1, from: '{{ dt_from }}', to: '{{ dt_to }}', q: ''}, function(data) {
+        // update global tag cloud
         $("div#wordcloud_global").jQCloud(data.tags);
+        // update gender information
+        console.log(data.genderinfo);
+
+        mapLocales = data.localeinfo;
+        updateMapMarkers();
     }, "json");
     {% else %}
     // gather data for related tag cloud
     $.get("/json", {tags: "all", page: {{ page.id }}, month: -1, year: -1, from: '{{ dt_from }}', to: '{{ dt_to }}', q: '{{ searchterm }}'}, function(data) {
         $("div#wordcloud_related").jQCloud(data.tags);
+
+        console.log(data.genderinfo);
+        mapLocales = data.localeinfo;
+        updateMapMarkers();
+
     }, "json");
     {% endif %}
 
@@ -100,7 +115,7 @@ $(document).ready(function() {
     $(".btn-monthly").click(function() {
         $('html, body').animate({
             scrollTop: $($(this).data('scrolltarget')).offset().top
-        }, 2000);
+        },  2000);
     });
 
     $("#btn_smallcontent").click(function() {
@@ -200,14 +215,73 @@ $(document).ready(function() {
         return false;
     });
 
-    var topCommenters = {% autoescape off %} {{ commentercounts }} {% endautoescape %}
+    // commenter map
 
+    var map;
+    var geocoder;
+    var countryLatLongs = {};
+
+    function initialize() {
+      var mapOptions = {
+        zoom: 2,
+        center: new google.maps.LatLng(-34.397, 150.644)
+      };
+      map = new google.maps.Map(document.getElementById('map-canvas'),
+          mapOptions);
+
+var allowedBounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(85, -180),           // top left corner of map
+new google.maps.LatLng(-85, 180)            // bottom right corner
+  );
+
+//http://stackoverflow.com/questions/9893680/google-maps-api-v3-show-the-whole-world
+ var swt =allowedBounds .getSouthWest().lng();
+var nor = allowedBounds .getNorthEast().lat();
+var k = 5.0; 
+var n = allowedBounds .getNorthEast().lat() - k; 
+var e = allowedBounds .getNorthEast().lng() - k; 
+var s = allowedBounds .getSouthWest().lat() + k; 
+var w = allowedBounds .getSouthWest().lng() + k; 
+var neNew = new google.maps.LatLng( n, e ); 
+var swNew = new google.maps.LatLng( s, w ); 
+boundsNew = new google.maps.LatLngBounds( swNew, neNew ); 
+map.fitBounds(boundsNew);
+map.setZoom(2);
+      //setTimeout(updateMapMarkers, 20);
+    }
+
+    google.maps.event.addDomListener(window, 'load', initialize);
+    //initialize();
+
+    function updateMapMarkers() {
+        if (!map) {
+            console.log('updateMapMarkers: no map yet');
+            return;
+        }
+        for (var country in mapLocales) {
+            var country_data = mapLocales[country];
+            if (country == 'N/A') {
+                continue;
+            }
+
+            var marker = new google.maps.Marker({
+                map: map,
+                position: new google.maps.LatLng(country_data['lati'], country_data['longi']),
+                title: country,
+                icon:'https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld='+ (country_data['count']) +'|FF776B|000000',
+                shadow:'https://chart.googleapis.com/chart?chst=d_map_pin_shadow'
+            });
+        }
+    }
+
+    // top commenters
+    (function() {
+    var topCommenters = {% autoescape off %} {{ commentercounts }} {% endautoescape %}
     $("#wordcloud_users").jQCloud(topCommenters, {
                  removeOverflowing: true,
                 delayedMode: true
             });
-
-
+    })();
 });
 </script>
 {% endblock %}
@@ -263,16 +337,21 @@ $(document).ready(function() {
         <div class="span10 offset1">
 
         <div class="row-fluid">
-            <div class="span3">
-                <h3>Jump to month:</h3>
+            <div class="span1">
+                <h3>Month:</h3>
                 <ul class="jumptomonth">
                 {% for monthinfo in posts_by_month reversed %}
                 <li><a class="scrollto" href="#month_{{ monthinfo.id }}">{{ monthinfo.id }}</a></li>
                 {% endfor %}
                 </ul>
             </div>
+            <div class="span5">
+                <h3>Comment Location:</h3>
+                <div id="map-canvas"></div>
+            </div>
             {% if searchterm == '' %}
             <div class="span5">
+                <h3>Key Metrics</h3>
                 <div id="chart_pagehistory" class="chart span12" style="height: 300px;"></div>
             </div>
             {% else %}
@@ -280,7 +359,7 @@ $(document).ready(function() {
                 <h3>Top Commenters</h3>
                 <div id="wordcloud_users" class="span3" style="height: 300px; position: relative;"></div>
             </div>
-             <div class="span4">
+             <div class="{% if searchterm == '' %}span4{% else %}span3{% endif %}">
                 <h3><i class="icon-tag"></i> Related Keywords</h3>
                 <div id="wordcloud_related" class="span12" style="height: 300px; position: relative;"></div>
             </div>
@@ -295,7 +374,7 @@ $(document).ready(function() {
                 <ul class="span7 month_content" id="post_item_list_{{monthinfo.month}}_{{monthinfo.year}}">
             {% for post in monthinfo.posts reversed %} 
                 <li class="post_item{% if forloop.counter > 6 %} ui-helper-hidden{% endif %} post_type_{{post.posttype}}"><p class="post_meta"><strong><i class="icon-user"></i> {{ post.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ post.createtime }}"><i class="icon-calendar"></i> {{ post.createtime|naturaltime }}</a> <a href="#" title="{{post.posttype}}"><i class="{% posttype post.posttype %}"></i></a> (<i class="icon-thumbs-up"></i>{{post.likes}} likes)</p>
-                <blockquote class="post_content">{{ post.text|urlizetrunc:60 }}</blockquote>
+                <blockquote class="post_content">{% if searchterm == '' %}{{ post.text|urlizetrunc:60 }}{% else %}{{ post.text|urlizetrunc:60|highlight:searchterm }}{% endif %}</blockquote>
                 <div class="btn-group">
                     <a href="/page/{{ page.id }}/post/{{ post.id }}" class="btn btn-xs post_details_link">Details</a>
                 {% if comments|get_item:post.id %}
@@ -306,7 +385,7 @@ $(document).ready(function() {
                 <ul class="post_comments" id="post_comments_list_{{ post.id }}">
                 {% for comment in comments|get_item:post.id %}
                     <li class="comment_item"><p class="comment_meta"><i class="icon-user"></i> <strong>{{ comment.createuser.alias }}</strong></span> <span class="post_meta pull-right"><a href="#" title="{{ comment.createtime }}"><i class="icon-calendar"></i> {{ comment.createtime|naturaltime }}</a> (<i class="icon-thumbs-up"></i> {{ comment.likes }} likes)</p>
-                    <blockquote class="comment_content">{{ comment.text|urlizetrunc:60 }}</blockquote>
+                    <blockquote class="comment_content">{% if searchterm == '' %}{{ comment.text|urlizetrunc:60 }}{% else %}{{ comment.text|urlizetrunc:60|highlight:searchterm }}{% endif %}</blockquote>
                     </li>
                 {% endfor %}
                 </ul> 

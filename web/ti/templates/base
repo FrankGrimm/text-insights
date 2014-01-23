@@ -88,8 +88,9 @@
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
     <script src="{% static "bootstrap/js/bootstrap.min.js" %}"></script>
     <script src="{% static "bootstrap-datepicker/js/bootstrap-datepicker.js" %}"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAwab5L39pYWmSd6L2SQnfVXu5oiREZJ9M&sensor=false"></script>
     
-    {% block scriptadd %}{% endblock %}
     <script src="/base.js"></script>
+    {% block scriptadd %}{% endblock %}
   </body>
 </html>

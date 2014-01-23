@@ -194,3 +194,11 @@ blockquote.comment_content {
     .tags .alt .tag4{background:#3277ad;}
     .tags .alt .tag5{background:#266ca2;}
 
+div#map-canvas {
+    height: 300px;
+    width: 100%;
+}
+
+span.w_new_false {
+    color: red !important;
+}

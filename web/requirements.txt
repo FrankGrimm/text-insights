@@ -4,6 +4,7 @@ PAM==0.4.2
 Twisted-Core==10.1.0
 Twisted-Names==10.1.0
 Twisted-Web==10.1.0
+beautifulsoup4==4.3.2
 distribute==0.6.14
 foolscap==0.5.0
 ipython==0.10

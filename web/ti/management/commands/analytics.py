@@ -132,9 +132,10 @@ class Command(BaseCommand):
         #kps = Keyphrase.objects.get_or_create(term=cur8'term', method=kp_method, defaults={'val': str(curcount)0)
 
     def processTfIdf(self, currentpage):
-        for ngram_level in range(1, self.max_ngram_level+1):
-           #self.processTf(currentpage, ngram_level)
-            self.processIdf(currentpage, ngram_level)
+        #TNGRAM
+        #for ngram_level in range(1, self.max_ngram_level+1):
+        #   #self.processTf(currentpage, ngram_level)
+        #    self.processIdf(currentpage, ngram_level)
         self.processIdfGeneric(currentpage, "pos_sequence", "idf-pos")
 
     def processTf(self, currentpage, ngram_level):
@@ -294,9 +295,10 @@ class Command(BaseCommand):
         # enqueue post for POS tag batch processing
         tagged_text = self.postagger.enqueue(post, text)
 
-        for cur_ngram_level in range(1, self.max_ngram_level+1):
-            current_ngrams = nltk.ngrams(text, cur_ngram_level)
-            self.storeNGrams(post, cur_ngram_level, current_ngrams)
+        #TNGRAM
+        #for cur_ngram_level in range(1, self.max_ngram_level+1):
+        #    current_ngrams = nltk.ngrams(text, cur_ngram_level)
+        #    self.storeNGrams(post, cur_ngram_level, current_ngrams)
 
     def is_number(self, s):
         try:

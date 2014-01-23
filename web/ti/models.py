@@ -44,8 +44,19 @@ class User(models.Model):
     id = models.BigIntegerField(primary_key=True)
     fullname = models.CharField(max_length=500L)
     alias = models.CharField(max_length=50L)
+    gender = models.CharField(max_length=10L)
+    locale = models.CharField(max_length=10L)
     class Meta:
         db_table = 'user'
+
+class UserMeta(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User)
+    text = models.TextField()
+    url = models.TextField()
+    metatype = models.TextField()
+    class Meta:
+        db_table = 'user_meta'
 
 class Page(models.Model):
     id = models.AutoField(primary_key=True)
@@ -55,4 +66,12 @@ class Page(models.Model):
     owner = models.ForeignKey('User', db_column='owner')
     class Meta:
         db_table = 'page'
+
+class CountryLocales(models.Model):
+    id = models.AutoField(primary_key=True)
+    continent = models.CharField(max_length=150L)
+    ccode = models.CharField(max_length=10L)
+    cname = models.CharField(max_length=255L)
+    lati = models.IntegerField()
+    longi = models.IntegerField()
 

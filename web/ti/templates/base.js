@@ -1,6 +1,11 @@
 (function($) {
 $(document).ready(function(){
 
+    // setup datepicker defaults
+    $.fn.datepicker.defaults.weekStart = 1; // week start = Monday
+    $.fn.datepicker.defaults.format = "yyyy-mm-dd";
+    $("input.datepicker").datepicker();
+
     // tagcloud JS
     var switcher = $('<a href="javascript:void(0)" class="btn">Change appearance</a>').toggle(
         function(){
@@ -54,11 +59,6 @@ $(document).ready(function(){
         console.log('ajaxStop');
         $('#ajaxload').hide();
     });
-
-    // setup datepicker defaults
-    $.fn.datepicker.defaults.weekStart = 1; // week start = Monday
-    $.fn.datepicker.defaults.format = "yyyy-mm-dd";
-    $("input.datepicker").datepicker();
 
 });
 })(jQuery);
