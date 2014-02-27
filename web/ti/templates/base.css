@@ -199,6 +199,10 @@ div#map-canvas {
     width: 100%;
 }
 
-span.w_new_false {
-    color: red !important;
+span.w_new_true { /* commenteronly */
+    color: #B58453 !important;
+}
+
+span.w_pageonly_true { /* pageonly */
+    color: #496BC9 !important;
 }

@@ -188,8 +188,29 @@ class Command(BaseCommand):
         # tag remaining posts
         self.postagger.enqueue(forceProcessing=True)
 
+    def filterDuplicateKeyphrases(self, text, vk_twtr, vk_nltk):
+        filtered = []
+        for kp in vk_twtr:
+            filtered.append(kp)
+
+        for kp_add in vk_nltk:
+            already_added = False
+            for kp_existing in filtered:
+                if kp_existing[0] == kp_add[0]:
+                    already_added = True
+                    break
+            if not already_added:
+                filtered.append(kp_add)
+
+        print "vk_twtr: %s vk_nltk: %s -> res: %s" % (len(vk_twtr), len(vk_nltk), len(filtered))
+
+        return filtered
+
     def callbackPOS(self, opost, text, tagged):
-        valid_keyphrases = self.extractKeyphrases(tagged)
+        nltktags = nltk.pos_tag(text)
+        valid_keyphrases_twtr = self.extractKeyphrases(tagged, ['N'])
+        valid_keyphrases_nltk = self.extractKeyphrases(nltktags, ['NN', 'NNS'])
+        valid_keyphrases = self.filterDuplicateKeyphrases(text, valid_keyphrases_twtr, valid_keyphrases_nltk)
         kp_method = KeyphraseMethod.objects.get(name="pos_sequence")
 
         for kp_text, kp_offset, kp_len in valid_keyphrases:
@@ -209,15 +230,20 @@ class Command(BaseCommand):
         for idx in range(len(list_a) - length):
             yield [list_a[idx:idx + length], list_b[idx : idx+length], idx, length]
 
-    def extractKeyphrases(self, tagged):
+    def extractKeyphrases(self, tagged, noun_tags):
         kp_len_max = 5
         kp_len_min = 1
 
         tokens = []
         tags = []
-        for token, tag, confidence in tagged:
-            tokens.append(token)
-            tags.append(tag)
+        if len(tagged) > 0 and len(tagged[0]) == 3:
+            for token, tag, confidence in tagged:
+                tokens.append(token)
+                tags.append(tag)
+        elif len(tagged) > 0 and len(tagged[0]) == 2:
+            for token, tag in tagged:
+                tokens.append(token)
+                tags.append(tag)
 
         kp_results = []
 
@@ -226,13 +252,15 @@ class Command(BaseCommand):
         for idx in range(len(tags)):
             tag = tags[idx]
             # gather multi-term noun-phrases
-            if tag == 'N' and kp_start < 0:
+            if tag in noun_tags and kp_start < 0:
                 kp_start = idx
-            elif tag == 'N' and kp_start >= 0:
+            elif tag in noun_tags and kp_start >= 0:
                 kp_end = idx
-            elif tag != 'N' and kp_start >= 0:
+            elif not tag in noun_tags and kp_start >= 0:
                 if kp_end < 0:
                     kp_end = kp_start
+                if kp_end == kp_start:
+                    kp_end = kp_end + 1
                 slice_tokens = tokens[kp_start:kp_end]
                 slice_tags = tags[kp_start:kp_end]
                 if len(slice_tokens) >= kp_len_min and len(slice_tokens) <= kp_len_max:
@@ -309,6 +337,8 @@ class Command(BaseCommand):
 
     def isValidTokenSequence(self, curngram):
         for term in curngram:
+            if len(term) < 2:
+                return False
             if term in [".", ",", "-", "+", "%", "?", "!", "$", "&", "/", "\"", "'", "`", "`", "|", ":", ";", ")", "(", "[", "]", "{", "}"]:
                 return False
             if self.is_number(term):

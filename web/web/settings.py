@@ -197,7 +197,7 @@ LOGIN_URL="/login"
 
 POS_TAGGER={
     'command': '~/ark-tweet-nlp-0.3.2/runTagger.sh --quiet --input-format text --output-format conll',
-    'max_queue': 40
+    'max_queue': 10
 }
 
 CACHES = {
@@ -206,6 +206,8 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     },
     'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211'
+        #'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     } # dummy cache
 }

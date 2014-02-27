@@ -8,6 +8,8 @@ class Keyphrase(models.Model):
     term = models.TextField()
     normalized = models.TextField(blank=True)
     val = models.DecimalField(max_digits=20, decimal_places=10)
+    def __str__(self):
+        return "Keyphrase \"%s\"" % self.term
     class Meta:
         db_table = 'keyphrase'
 
@@ -28,6 +30,8 @@ class Post(models.Model):
     parent = models.ForeignKey('self', null=True, db_column='parent', blank=True)
     page = models.ForeignKey('Page', db_column='page')
     createuser = models.ForeignKey('User', db_column='createuser')
+    def __str__(self):
+        return "Post %s" % self.id
     class Meta:
         db_table = 'post'
 
@@ -46,6 +50,8 @@ class User(models.Model):
     alias = models.CharField(max_length=50L)
     gender = models.CharField(max_length=10L)
     locale = models.CharField(max_length=10L)
+    def __str__(self):
+        return "User %s" % (self.alias)
     class Meta:
         db_table = 'user'
 
@@ -53,8 +59,13 @@ class UserMeta(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User)
     text = models.TextField()
+    fb_page = models.TextField(max_length=2048L)
+    fb_category = models.TextField(max_length=500L)
+    fb_page_desc = models.TextField()
     url = models.TextField()
     metatype = models.TextField()
+    def __unicode__(self):
+        return "Metaentry %s" % self.text
     class Meta:
         db_table = 'user_meta'
 
@@ -64,6 +75,8 @@ class Page(models.Model):
     fb_page_name = models.CharField(max_length=2048L)
     last_updated = models.DateTimeField()
     owner = models.ForeignKey('User', db_column='owner')
+    def __str__(self):
+        return "Page \"%s\"" % self.fb_page_name
     class Meta:
         db_table = 'page'
 
