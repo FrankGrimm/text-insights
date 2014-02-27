@@ -88,3 +88,24 @@ class CountryLocales(models.Model):
     lati = models.IntegerField()
     longi = models.IntegerField()
 
+class UserCluster(models.Model):
+    id = models.AutoField(primary_key=True)
+    page = models.ForeignKey('Page', db_column='page')
+    class Meta:
+        db_table = 'cluster'
+
+class UserClusterAssoc(models.Model):
+    id = models.AutoField(primary_key=True)
+    cluster = models.ForeignKey('UserCluster', db_column='cluster')
+    clusteruser = models.ForeignKey('User', db_column='clusteruser')
+    class Meta:
+        db_table = 'cluster_assoc'
+
+class UserClusterTerm(models.Model):
+    id = models.AutoField(primary_key=True)
+    cluster = models.ForeignKey('UserCluster', db_column='cluster')
+    clusterterm = models.CharField(max_length=2048L)
+    termweight = models.FloatField()
+    class Meta:
+        db_table = 'cluster_terms'
+
