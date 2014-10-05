@@ -1,0 +1,58 @@
+{% extends "base" %}
+{% load dictget %}
+{% load static from staticfiles %}
+
+
+{% block title %}Page &quot;{{ page.fb_page_name }}&quot; | Text Insights{% endblock %}
+
+{% block scriptadd %}
+
+<script src="{% static "tagcloud/js/tinysort.js" %}"></script>
+<script src="{% static "jqcloud/jqcloud-1.0.4.js" %}"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    // cluster
+    var cloudid = "";
+    var tags = null;
+    {% for cluster in clusters %}
+    // {{ cluster.id }}
+    cloudid = "div#wordcloud_{{cluster.id}}";
+    tags = {% autoescape off %}{{ clusterterm_json|get_item:cluster.id }}{% endautoescape %};
+    $(cloudid).jQCloud(tags);
+    {% endfor %}
+});
+</script>
+
+{% endblock %}
+
+{% block maincontent %}
+    <div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span10 offset1">
+        <h2>All Clusters ({{clustercount}})</h2>
+        </div>
+    </div>
+    {% for cluster in clusters %}
+    <div class="row-fluid">
+        <div class="span3 offset1">
+            <h3>Cluster #{{ cluster.id }}</h3>
+        </div>
+        <div class="span6">
+            <div id="wordcloud_{{cluster.id}}" class="span12" style="height: 300px; position: relative;"></div>
+        </div>
+        <div class="span2">
+        <strong>Users ({{ clusterusers|get_item:cluster.id|length }}): </strong><ul style="list-style-type:none;">{% for user in clusterusers|get_item:cluster.id %}
+            {% if forloop.counter == 20 and clusterusers|get_item:cluster.id|length > 20 %}
+            <li>{{ clusterusers|get_item:cluster.id|length|add:"-20" }} more</li>
+            {% else %}
+                {% if forloop.counter < 20 %}
+                <li>{{user.clusteruser.alias}}</li>
+                {% endif %}
+            {% endif %}
+        {% endfor %}</ul>
+        </div>
+    </div>
+    {% endfor %}
+    </div><!-- /div.container-fluid -->
+
+{% endblock %}

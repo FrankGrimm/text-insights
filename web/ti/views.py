@@ -36,6 +36,60 @@ def user_info(request):
     return ""
 
 @login_required
+@never_cache
+def page_cluster(request, page_id=None):
+    if page_id is None:
+        raise Exception("Invalid page id")
+
+    ctx = {}
+    # page object
+    page = ctx['page'] = Page.objects.get(id=page_id)
+
+    # all clusters for this page
+    pageclusters = UserCluster.objects.filter(page__exact=page)
+    pagecluster_terms = {}
+    pagecluster_users = {}
+
+    ctx['clusterterm_json'] = {}
+    for currentcluster in pageclusters:
+        pagecluster_users[currentcluster.id] = UserClusterAssoc.objects.filter(cluster__exact = currentcluster)
+        pagecluster_terms[currentcluster.id] = list( reversed(sorted(UserClusterTerm.objects.filter(cluster__exact = currentcluster), key=lambda k: k.termweight)))[:100]
+        ctx['clusterterm_json'][currentcluster.id] = []
+        weight_bounds = [None, None] # min, max
+        for termassoc in pagecluster_terms[currentcluster.id]:
+            termobj = {}
+            termobj['link'] = "#"
+            termobj['text'] = termassoc.clusterterm
+            termobj['weight'] = termassoc.termweight
+            if weight_bounds[0] is None:
+                #initialize
+                weight_bounds[0] = termassoc.termweight
+                weight_bounds[1] = termassoc.termweight
+            else:
+                if termassoc.termweight < weight_bounds[0]:
+                    weight_bounds[0] = termassoc.termweight
+                if termassoc.termweight > weight_bounds[1]:
+                    weight_bounds[1] = termassoc.termweight
+
+            ctx['clusterterm_json'][currentcluster.id].append(termobj)
+
+
+        for termobj in ctx['clusterterm_json'][currentcluster.id]:
+            if (weight_bounds[1] - weight_bounds[0]) > 0.0:
+                termobj['weight'] = (termobj['weight'] - weight_bounds[0]) / (weight_bounds[1] - weight_bounds[0]) * 100.0
+            termobj['weight'] = int(termobj['weight'])
+        ctx['clusterterm_json'][currentcluster.id] = json.dumps(ctx['clusterterm_json'][currentcluster.id])
+
+    ctx['clusterusers'] = pagecluster_users
+    ctx['clusterterms'] = pagecluster_terms
+
+
+    ctx['clustercount'] = len(pageclusters)
+    ctx['clusters'] = list( reversed(sorted(pageclusters, key=lambda k: len(pagecluster_users[ k.id ]) )) )
+    #ctx['clusters'] = [for c in ctx['clusters'] if len(pagecluster_users[c.id]) > 1]
+    return render(request, 'pagecluster', ctx, content_type="text/html")
+
+@login_required
 @cache_page(60 * 15)
 def page_info(request, page_id=None, single_post_id=None):
     if page_id is None:
